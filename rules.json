@@ -1,0 +1,27 @@
+[
+    {
+      "id": 1,
+      "priority": 1,
+      "action": {
+        "type": "redirect",
+        "redirect": {
+          "extensionPath": "/INGAMEPNG.png"
+        }
+      },
+      "condition": {
+        "urlFilter": "https://basketbros.io/assets/INGAME.png",
+        "resourceTypes": ["image"]
+      }
+    },
+    {
+        "id": 2,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "https\\:\\/\\/basketbros.*bro.png",
+            "resourceTypes": ["image"]
+        }
+    }
+]

@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "BasketBros++",
+  "version": "0.1",
+  "description": "Basketbros Community Edition",
+  "permissions": ["scripting", "declarativeNetRequest"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://basketbros.io/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://basketbros.io/*"],
+      "js": ["modify_head.js", "mark.js"]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css"],
+      "matches": ["https://basketbros.io/*"]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+.stats-table {
+    position: absolute;
+    top: 25%;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    background: rgba(255, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+.stats-table table {
+    border-collapse: collapse;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.stats-table td {
+    padding: 5px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: cyan;
+    font-weight: bold;
+}
+
+.stats-table.left {
+    left: 5px;
+}
+
+.stats-table.right {
+    right: 5px;
+}
+
+.version-mark {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    background: rgba(255, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 5px 15px;
+    color: cyan;
+    font-weight: bold;
+}
