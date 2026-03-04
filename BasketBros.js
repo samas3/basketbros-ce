@@ -124,8 +124,8 @@ class CharacterFinder {
             // default weight = 1
             // name, isFemale, shooting, height, hops, speed, handles, defense, strengths, weaknesses, critical, resilience, skills (todo), skill desc, texture
             ["Jar Tougger", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 20, 6, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.quarter == 1 || data.time != 59) return;
+                eventBus.register("start_quarter", (data) => {
+                    if (data.quarter == 1) return;
                     for (const guy of Util.getFromName("Jar Tougger")) {
                         guy.vars.decrease = true;
                     }
@@ -353,8 +353,7 @@ class CharacterFinder {
                 });
             }, "Gets 1 point but decreases shooting when knocked down", "bro_30"],
             ["Wang Rank1", true, 6, 3, 4, 5, 10, 5, "Rank 1 position in academic scores, sometimes even followed by an AK achievement.", "Sleepy, turns red easily.", 0, 10, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.time != 59) return;
+                eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Wang Rank1")) {
                         guy.vars.change = true;
                     }
@@ -381,8 +380,8 @@ class CharacterFinder {
                 });
             }, "Increases speed when knocked down", "bro_2"],
             ["Mac King", false, 4, 6, 6, 8, 5, 7, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.quarter != 1 || data.time != 59 || data.main.player.practiceMode) return;
+                eventBus.register("start_quarter", (data) => {
+                    if (data.quarter != 1 || data.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
                         let opponent = Util.getOpponent(guy);
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
@@ -423,8 +422,7 @@ class CharacterFinder {
                 }); // local_loc: x -700~700, y: 0?~304
             }, "Very weak but with great defense", "bro_15"],
             ["Champion Yellow", false, 8, 6, 5, 7, 6, 3, "A champion (literally)", "Poor performance in the off season.", 0, 4, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.time != 59) return;
+                eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Champion Yellow")) {
                         if (data.quarter == 1) {
                             guy.vars.target = Math.floor(Math.random() * 4) + 1;
@@ -513,10 +511,17 @@ class CharacterFinder {
                 });
             }, "Increases critical when taunting", "bro_12"], [], [], [], [], [], [], [], [], [], [], [], [], // page 2
             ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
-            ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {}, "", "bro_2"],
+            ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
+                eventBus.register("punch", (data) => {
+                    if (data.from.charName == "Trey Youth+" && data.success) {
+                        let guy = data.from;
+                        guy.ReleaseShot();
+                    }
+                });
+            }, "", "bro_2"],
             ["samas 3000", false, 0, 5, 0, 0, 0, 0, "", "", 0, 0, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.quarter != 1 || data.time != 59 || data.main.player.practiceMode) return;
+                eventBus.register("start_quarter", (data) => {
+                    if (data.quarter != 1) return;
                     for (const guy of Util.getFromName("samas 3000")) {
                         if (guy instanceof CPUGuy) continue;
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
@@ -718,6 +723,12 @@ eventBus.register("timer", (data) => {
 eventBus.register("point", (data) => {
     if (data.critical) data.misc.AddFlash(data.guy.GetBall(), 0, 8, 8);
 });
+eventBus.register("time_quarter", (data) => {
+    if (data.time == 59) {
+        eventBus.fire("start_quarter", { quarter: data.quarter, game: data.game, main: data.main });
+        if (data.quarter == 1) data.game._shotPoints = 3;
+    }
+})
 
 var $lime_init = function($hx_exports, $global) {
     "use strict";
