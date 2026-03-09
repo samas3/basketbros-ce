@@ -15,5 +15,8 @@
 3. 打开`开发者模式`
 4. 点击`+（from.zip/.crx/.user.js）`，选择*.zip文件打开
 
+## 更新日志
+[点击查看](https://github.com/samas3/basketbros-ce/releases)
+
 ## 全认出来可以把自己加进去了不怼好像本来就都在 ———— Turr Toe
 ![](请输入文本.png)

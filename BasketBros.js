@@ -164,6 +164,12 @@ class CharacterFinder {
                         }
                     }
                 });
+                eventBus.register("jump", (data) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Dad Penguin") {
+                        guy.mHandles += 0.3;
+                    }
+                });
             }, "Increases critical when holding the ball but decreases handles", "bro_22"],
             ["Nike Loong", false, 5, 6, 5, 5, 7, 7, "Cute appearence, sturdy build, excellent splendor ability.", "Unstable luck in Genshin Impact wishes.", 0, 8, () => {
                 eventBus.register("punch", (data, event) => {
@@ -265,7 +271,7 @@ class CharacterFinder {
                     }
                 })
             }, "Dunk score = quarter number", "bro_33"],
-            ["Lit Fatter", false, 7, 9, 5, 5, 8, 8, "Taller than Bob. Unbeatable boxing opponent.", "Slower than \"Turr Toe\", may wander around a bit during the game.", 0, 7, () => {
+            ["Lit Fatter", false, 7, 9, 5, 5, 8, 8, "Taller than Bio Bee. Unbeatable boxing opponent.", "Slower than \"Turr Toe\", may wander around a bit during the game.", 0, 7, () => {
                 eventBus.register("punch", (data) => {
                     let guy = data.from, to = data.to;
                     if (guy.charName == "Lit Fatter" && data.success) {
@@ -419,7 +425,8 @@ class CharacterFinder {
                     if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
                         e.KnockDown(a, 500);
                     }
-                }); // local_loc: x -700~700, y: 0?~304
+                }); // local_loc: x -700~700, y: -65~304
+                // goal: y=-65, x=+-617
             }, "Very weak but with great defense", "bro_15"],
             ["Champion Yellow", false, 8, 6, 5, 7, 6, 3, "A champion (literally)", "Poor performance in the off season.", 0, 4, () => {
                 eventBus.register("start_quarter", (data) => {
@@ -509,39 +516,53 @@ class CharacterFinder {
                 eventBus.register("taunt", (data) => {
                     if (data.guy.charName == "Blizzard Johnny" && data.guy.mCritical < 75) data.guy.mCritical++;
                 });
-            }, "Increases critical when taunting", "bro_12"], [], [], [], [], [], [], [], [], [], [], [], [], // page 2
-            ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
-            ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
+            }, "Increases critical when taunting", "bro_12"],
+            ["Lil Du2ian", false, 6, 4, 7, 10, 2, 7, "Lightning speed with incredible skills on foot. Can do mostly everything his body allows, awfully adorable.", "Small, easy to get hurt. Needs to take care of himself when facing vicious peers, as his cuteness is too attrative.", 0, 9, () => {
                 eventBus.register("punch", (data) => {
-                    if (data.from.charName == "Trey Youth+" && data.success) {
+                    if (data.from.charName == "Lil Du2ian" && data.success) {
                         let guy = data.from;
+                        guy.mShooting += 2;
                         guy.ReleaseShot();
+                        guy.mShooting -= 2;
                     }
                 });
+            }, "Du2ian shows off his soccer skills when he successfully kicks his opponent down and flicks the ball into the air as a shot.", "bro_28"],
+            ["Bio Bee", false, 5, 8, 6, 5, 4, 8, "Massive, nearly as tall as the hoop. Unquestionable domination in board games and card games.", "Has a high possibility to be banned in group card games. Needs to endure being a perfect son during specific classes.", 0, 6, () => {
+                eventBus.register("shoot", (data, event) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Bio Bee" && guy.score >= 15) {
+                        if (data.point == 2) {
+                            event.ret = {point: 4};
+                        }
+                    }
+                })
+            }, "Gets more points while dunking after getting a certain score"],
+            [], [], [], [], [], [], [], [], [], [], // page 2
+            ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
+            ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
             }, "", "bro_2"],
-            ["samas 3000", false, 0, 5, 0, 0, 0, 0, "", "", 0, 0, () => {
+            ["samas 3000", false, 0, 5, 0, 0, 0, 0, "Excellent IT engineer, skilled hacker and developer of the game. Vivid mimic of unpredictable sounds.", "Requires a better computer. Lacks operational skills in real-world and online games. Should watch out for animal controls.", 0, 0, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1) return;
                     for (const guy of Util.getFromName("samas 3000")) {
-                        if (guy instanceof CPUGuy) continue;
-                        let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
-                        let choice = parseInt(prompt(`(Side ${side}) Input Shooting`));
+                        if (Util.getSide(guy) == 1) continue;
+                        let choice = parseInt(prompt(`Input Shooting`));
                         guy.mShooting = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Hops`));
+                        choice = parseInt(prompt(`Input Hops`));
                         guy.mHops = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Speed`));
+                        choice = parseInt(prompt(`Input Speed`));
                         guy.mSpeed = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Defense`));
+                        choice = parseInt(prompt(`Input Defense`));
                         guy.mDefense = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Handles`));
+                        choice = parseInt(prompt(`Input Handles`));
                         guy.mHandles = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Critical`));
+                        choice = parseInt(prompt(`Input Critical`));
                         guy.mCritical = choice;
-                        choice = parseInt(prompt(`(Side ${side}) Input Resilience`));
+                        choice = parseInt(prompt(`Input Resilience`));
                         guy.mResilience = choice;
                     }
                 });
-            }, "", "bro_26"]
+            }, "", "bro_3"]
         ];
         
         this.chars = {};
@@ -649,6 +670,10 @@ class CharacterFinder {
                 return [1497, 1472, 123, 199];
             case "Turr Toe":
                 return [0, 1591, 144, 106];
+            case "Bio Bee":
+                return [160, 1604, 96, 92];
+            case "Lil Du2ian":
+                return [265, 1585, 126, 160];
         }
     }
 }
@@ -721,7 +746,14 @@ eventBus.register("timer", (data) => {
     lastTimer = data.time;
 });
 eventBus.register("point", (data) => {
-    if (data.critical) data.misc.AddFlash(data.guy.GetBall(), 0, 8, 8);
+    if (data.critical) {
+        let i = 0;
+        let interval = setInterval(() => {
+            data.misc.AddFlash(data.guy.GetBall(), 0, 2, 2);
+            i++;
+            if (i > 10) clearInterval(interval);
+        }, 10);
+    }
 });
 eventBus.register("time_quarter", (data) => {
     if (data.time == 59) {
@@ -11845,8 +11877,10 @@ var $lime_init = function($hx_exports, $global) {
                 InitPunch: function() {
                     var e = this;
                     if (!(this.punchCounter > 0)) {
-                        this.mode = Modes.MODE_SPECIAL_MOVE,
-                        this.bones.PlayAnimation(this.GetAttackPerk().animName, !1, 0, 3.5),
+                        this.mode = Modes.MODE_SPECIAL_MOVE;
+                        let animName = "punch";
+                        if (this.charName == "Lil Du2ian") animName = "karate_attack";
+                        this.bones.PlayAnimation(animName, !1, 0, 3.5),
                         this.AddMovement(14, 0, 0, 100),
                         this.punchCounter = 60,
                         this.AddEvent((function() {
@@ -12039,7 +12073,8 @@ var $lime_init = function($hx_exports, $global) {
                         this.GetPunchMovement() ? (e = this.GetBall()).guyPosessedBy == this ? this.InitSetShot() : this.InitPunch() : null != this.GetTauntMovement() && e.guyPosessedBy != this ? this.Celebrate(this.GetTauntMovement()) : this.ySpeed < -.01 ? (this.mode = Modes.MODE_JUMPING,
                         this.tookOffWithBall = null != e && e.guyPosessedBy == this,
                         this.bones.PlayAnimation(this.GetJumpInAnim(), !1),
-                        Misc.PlaySound(JUMP_$WAV.Get())) : Math.abs(this.xSpeed) <= .3 && (this.mode = Modes.MODE_IDLE,
+                        Misc.PlaySound(JUMP_$WAV.Get()),
+                        eventBus.fire("jump", { guy: this, game: MainGame, main: Main })) : Math.abs(this.xSpeed) <= .3 && (this.mode = Modes.MODE_IDLE,
                         this.bones.PlayAnimation(this.GetIdleAnim(), !0, 200))
                     }
                 },
