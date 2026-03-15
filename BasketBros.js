@@ -82,6 +82,9 @@ class Util {
     static isMissed(guy) {
         return Math.random() < (guy.mMissRate - guy.mCritical) / 100;
     }
+    static isCPUGuy(guy) {
+        return !this.main.player.twoPlayerMode && this.getSide(guy) == 1;
+    }
 }
 
 class CharacterFinder {
@@ -392,7 +395,7 @@ class CharacterFinder {
                         let opponent = Util.getOpponent(guy);
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice;
-                        if (guy instanceof CPUGuy) choice = Math.floor(Math.random() * 5);
+                        if (Util.isCPUGuy(guy)) choice = Math.floor(Math.random() * 5);
                         else choice = parseInt(prompt(`(Side ${side}) Input stats id to change (0=Shooting, 1=Hops, 2=Speed, 3=Defense, 4=Handles)`));
                         switch(choice) {
                             case 0:
@@ -545,7 +548,7 @@ class CharacterFinder {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1) return;
                     for (const guy of Util.getFromName("samas 3000")) {
-                        if (Util.getSide(guy) == 1) continue;
+                        if (Util.isCPUGuy(guy)) continue;
                         let choice = parseInt(prompt(`Input Shooting`));
                         guy.mShooting = choice;
                         choice = parseInt(prompt(`Input Hops`));
