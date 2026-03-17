@@ -548,20 +548,20 @@ class CharacterFinder {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1) return;
                     for (const guy of Util.getFromName("samas 3000")) {
-                        if (Util.isCPUGuy(guy)) continue;
-                        let choice = parseInt(prompt(`Input Shooting`));
+                        let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
+                        let choice = parseInt(prompt(`(Side ${side}) Input Shooting`));
                         guy.mShooting = choice;
-                        choice = parseInt(prompt(`Input Hops`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Hops`));
                         guy.mHops = choice;
-                        choice = parseInt(prompt(`Input Speed`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Speed`));
                         guy.mSpeed = choice;
-                        choice = parseInt(prompt(`Input Defense`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Defense`));
                         guy.mDefense = choice;
-                        choice = parseInt(prompt(`Input Handles`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Handles`));
                         guy.mHandles = choice;
-                        choice = parseInt(prompt(`Input Critical`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Critical`));
                         guy.mCritical = choice;
-                        choice = parseInt(prompt(`Input Resilience`));
+                        choice = parseInt(prompt(`(Side ${side}) Input Resilience`));
                         guy.mResilience = choice;
                     }
                 });
