@@ -85,6 +85,15 @@ class Util {
     static isCPUGuy(guy) {
         return !this.main.player.twoPlayerMode && this.getSide(guy) == 1;
     }
+    static setPos(obj, x, y) {
+        // local_loc: x -700~700, y: -65~304
+        // goal: y=-65, x=+-617
+        obj.local_loc.x = x;
+        obj.local_loc.y = y;
+    }
+    static getPos(obj) {
+        return [obj.local_loc.x, obj.local_loc.y];
+    }
 }
 
 class CharacterFinder {
@@ -176,11 +185,20 @@ class CharacterFinder {
             }, "Increases critical when holding the ball but decreases handles", "bro_22"],
             ["Nike Loong", false, 5, 6, 5, 5, 7, 7, "Cute appearence, sturdy build, excellent splendor ability.", "Unstable luck in Genshin Impact wishes.", 0, 8, () => {
                 eventBus.register("punch", (data, event) => {
-                    if (data.to.charName == "Nike Loong" && data.success) {
-                        let score1 = data.from.score, score2 = data.to.score;
-                        if (Math.random() < 0.2 + 0.05 * (score1 - score2)) {
+                    let guy = data.to;
+                    if (guy.charName == "Nike Loong" && data.success) {
+                        let score1 = data.from.score, score2 = guy.score;
+                        guy.vars.immune_chance = 0.2 + 0.05 * (score1 - score2);
+                        if (Math.random() < guy.vars.immune_chance) {
                             event.ret = {success: false};
                         }
+                    }
+                });
+                eventBus.register("time_quarter", (data) => {
+                    for (const guy of Util.getFromName("Nike Loong")) {
+                        let opponent = Util.getOpponent(guy);
+                        let score1 = opponent.score, score2 = guy.score;
+                        guy.vars.immune_chance = 0.2 + 0.05 * (score1 - score2);
                     }
                 });
             }, "Has a chance to be immune to punches", "bro_10"],
@@ -428,8 +446,7 @@ class CharacterFinder {
                     if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
                         e.KnockDown(a, 500);
                     }
-                }); // local_loc: x -700~700, y: -65~304
-                // goal: y=-65, x=+-617
+                });
             }, "Very weak but with great defense", "bro_15"],
             ["Champion Yellow", false, 8, 6, 5, 7, 6, 3, "A champion (literally)", "Poor performance in the off season.", 0, 4, () => {
                 eventBus.register("start_quarter", (data) => {
@@ -494,7 +511,7 @@ class CharacterFinder {
                     if (opponent == null) return;
                     if (data.guy.charName == "Juicy Fisher") opponent.mMissRate = 10 * data.guy.vars.misses;
                 });
-            }, "Has great punching ability but has chance of getting no points in certain quarters", "bro_13"],
+            }, "Has great punching ability but has chance of getting no points in certain quarters. When triggered, increases opponent's miss rate", "bro_13"],
             ["Turr Toe", false, 7, 3, 5, 7, 9, 6, "Superb verbal expressions, cute, nice haircut", "Needs to pay attention to his glasses when playing. 170.5.", 0, 3, () => {
                 eventBus.register("time_quarter", (data) => {
                     if (data.quarter < 3) return;
@@ -517,7 +534,7 @@ class CharacterFinder {
             }, "Inverts opponent's left and right movements", "bro_29"],
             ["Blizzard Johnny", false, 7, 4, 7, 4, 7, 3, "AI annihilator, amazing point scorer when not facing humans.", "Often fails to secure his phone from the teacher. Slays too much.", 0, 3, () => {
                 eventBus.register("taunt", (data) => {
-                    if (data.guy.charName == "Blizzard Johnny" && data.guy.mCritical < 75) data.guy.mCritical++;
+                    if (data.guy.charName == "Blizzard Johnny" && data.guy.getCritical() < 75) data.guy.mCritical++;
                 });
             }, "Increases critical when taunting", "bro_12"],
             ["Lil Du2ian", false, 6, 4, 7, 10, 2, 7, "Lightning speed with incredible skills on foot. Can do mostly everything his body allows, awfully adorable.", "Small, easy to get hurt. Needs to take care of himself when facing vicious peers, as his cuteness is too attrative.", 0, 9, () => {
@@ -530,7 +547,7 @@ class CharacterFinder {
                     }
                 });
             }, "Du2ian shows off his soccer skills when he successfully kicks his opponent down and flicks the ball into the air as a shot.", "bro_7"],
-            ["Bio Bee", false, 5, 8, 6, 5, 4, 8, "Massive, nearly as tall as the hoop. Unquestionable domination in board games and card games.", "Has a high possibility to be banned in group card games. Needs to endure being a perfect son during specific classes.", 0, 6, () => {
+            ["Bio Bee", false, 5, 8, 6, 5, 4, 8, "Massive, nearly as tall as the hoop. Inborn basketball talents that can even rival Lit Fatter. Unquestionable domination in board games and card games.", "Has a high possibility to be banned or plotted against in group card games. Needs to endure being a perfect son both at home and during specific classes.", 0, 6, () => {
                 eventBus.register("shoot", (data, event) => {
                     let guy = data.guy;
                     if (guy.charName == "Bio Bee" && guy.score >= 15) {
@@ -540,7 +557,67 @@ class CharacterFinder {
                     }
                 })
             }, "Gets more points while dunking after getting a certain score", "bro_28"],
-            [], [], [], [], [], [], [], [], [], [], // page 2
+            ["Poo Tatoo", false, 6, 5, 7, 5, 8, 3, "Hard to knock down. Cute appearance with calm emotions. Balanced gaming skills, better at Brostars than Nike Loong.", "Should keep away from raw or fried fish (if he don't want to turn into fish-and-chips). As slow as Blizzard Johnny.", 0, 9, () => {
+                eventBus.register("start_quarter", (data) => {
+                    for (const guy of Util.getFromName("Poo Tatoo")) {
+                        guy.vars.transport = true;
+                    }
+                });
+                eventBus.register("taunt", (data) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Poo Tatoo" && guy.vars.transport) {
+                        guy.vars.transport = false;
+                        let ball = guy.GetBall();
+                        Util.setPos(guy, Util.getPos(ball));
+                    }
+                });
+            }, "", ""],
+            ["Question Air", false, 3, 4, 10, 9, 3, 6, "Unbearable eagerness to get answers of any kind. Swift and agile, especially in the last few minutes of class.", "Some questions can be hard to answer, others may don't have answers at all. Has trouble in counting soldiers lying face-down.", 0, 8, () => {
+                eventBus.register("start_quarter", (data) => {
+                    for (const guy of guys) {
+                        if (data.quarter == 1) {
+                            guy.vars.oSpeed = guy.mSpeed;
+                        }
+                        guy.vars.sonic = true;
+                    }
+                });
+                eventBus.register("update", (data) => {
+                    let self = data.guy;
+                    let ball = self.GetBall();
+                    if (self.vars.sonic && ball) {
+                        if (ball.guyPosessedBy == null) {
+                            for (const guy of guys) {
+                                guy.mSpeed = 100;
+                            }
+                        } else {
+                            for (const guy of guys) {
+                                guy.mSpeed = guy.vars.oSpeed;
+                            }
+                        }
+                    };
+                });
+            }, "", ""],
+            ["Lab Bee", false, 2, 7, 4, 4, 4, 5, "Talented in drawing maps, especially in subway lines. Sturdy build with a humble <?>", "Not the best speaker, slow and clumsy. Can make humiliating comments, what's worse, spoken from his mouth, the meanest comments can turn into funny ones.", 50, 5, () => {
+
+            }, "", ""],
+            ["ZT Machine", false, 7, 7, 7, 7, 7, 7, "Skilled at math, more skilled at organizing dancing events. One of the few teachers that actually likes to play basketball, athletic.", "Not so skilled at process sequence writing (mostly in derivatives). Doesn't stand a chance when facing a boss named Wang and a boy named Ren.", 7, 7, () => {
+
+            }, "", ""],
+            ["Diddy Chacha", false, 5, 6, 7, 6, 5, 9, "Native American. Outstanding fishing skills, unbelievable geography knowledge. Seems to know everything. Will never get hungry, as long as there's peers with food nearby.", "His fishing rod may sometimes hit himself, creating comments like making blind people wear deaf aids. A fat rear can cause some issues.", 0, 6, () => {
+
+            }, "", ""],
+            ["Jen Soor", false, 4, 8, 2, 3, 5, 6, "Tall, always thinks carefully before he speaks. Also experienced in drawing subway maps. Has a huge collection of sweaters.", "Not a great speech giver either, clumsy responding time, can experience system errors when functioning.", 50, 3, () => {
+
+            }, "", ""],
+            ["Sobby Spur", false, 7, 8, 7, 6, 9, 3, "Humble and friendly, great soccer skills with a silky smooth long-distance shot to match. Skilled in using a cane and walking one-legged.", "Is fan of a soccer team not so worth depending on. Vulnerable to real injuries on the field, too easy to suffer mental injuries in politics class.", 0, 2, () => {
+
+            }, "", ""],
+            ["Bossy Wong", false, 9, 7, 4, 3, 9, 3, "Precise calculation, comprehensive question tackling, and one-of-a-kind perspectives. May be the only student in the class to have a real \"adult\" mindset.", "Horrible Chinese comprehension, can make rigid remarks sometimes. Once not so aware of timing, but he's doing much better these days.", 0, 6, () => {
+
+            }, "", ""], 
+            ["Wire Tea", false, 6, 5, 8, 7, 4, 10, "Very reliable with great leadership, superb chemistry knowledge. Can always keep the class from an overheated situation. Great player when on defence.", "Stubborn, appearance with a color similar to Nigg Banana. Totally suppressed by his girlfriend.", 0, 7, () => {
+
+            }, "", ""],// page 2
             ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
             ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
             }, "", "bro_2"],
@@ -697,7 +774,17 @@ class Table {
     addPropertyRow(propName, propValue) {
         const row = this.body.insertRow();
         row.insertCell(0).textContent = propName;
-        row.insertCell(1).textContent = Math.round(100 * propValue) / 100;
+        switch (typeof propValue) {
+            case "number":
+                row.insertCell(1).textContent = Math.round(100 * propValue) / 100;
+                break;
+            case "boolean":
+                row.insertCell(1).textContent = propValue + "";
+                break;
+            case "string":
+                row.insertCell(1).textContent = propValue;
+                break;
+        }
     }
     show() {
         this.element.style.display = 'block';
@@ -713,13 +800,24 @@ class Table {
         let cell = row.insertCell(0);
         cell.textContent = guy.charName;
         cell.colSpan = 2;
-        this.addPropertyRow('Sht', guy.mShooting);
-        this.addPropertyRow('Hop', guy.mHops);
-        this.addPropertyRow('Spd', guy.mSpeed); 
-        this.addPropertyRow('Hnd', guy.mHandles);
-        this.addPropertyRow('Def', guy.mDefense);
-        this.addPropertyRow('Crt', guy.mCritical - guy.mMissRate);
-        this.addPropertyRow('Res', guy.mResilience);
+        this.addPropertyRow('Shooting', guy.mShooting);
+        this.addPropertyRow('Hops', guy.mHops);
+        this.addPropertyRow('Speed', guy.mSpeed); 
+        this.addPropertyRow('Handles', guy.mHandles);
+        this.addPropertyRow('Defense', guy.mDefense);
+        this.addPropertyRow('Critical', guy.getCritical());
+        this.addPropertyRow('Resilience', guy.mResilience);
+
+        switch (guy.charName) {
+            case "Nike Loong":
+                this.addPropertyRow("Immune Punch", guy.vars.immune_chance || 0);
+                break;
+            case "Lit Fatter":
+                this.addPropertyRow("Weakens in", (5 - (guy.vars.punchs + 5) % 5) || 0);
+                break;
+            case "Poo Tatoo":
+                this.addPropertyRow("Transport", guy.vars.transport || false);
+        }
     }
 }
 
@@ -11286,7 +11384,7 @@ var $lime_init = function($hx_exports, $global) {
             $hxClasses.Guy = Guy,
             Guy.__name__ = "Guy",
             Guy.GetSkinName = function(e) {
-                return Chars.findByName(e).texture ?? "bro_3";
+                return Chars.findByName(e).texture || "bro_3";
             }
             ,
             Guy.GetIndex = function(e) {
@@ -11481,7 +11579,7 @@ var $lime_init = function($hx_exports, $global) {
             }
             ,
             Guy.GetStrengths = function(e) {
-                return Chars.findByName(e).strengths ?? "";
+                return Chars.findByName(e).strengths || "";
             }
             ,
             Guy.IsFemale = function(e) {
@@ -11489,11 +11587,11 @@ var $lime_init = function($hx_exports, $global) {
             }
             ,
             Guy.GetWeaknesses = function(e) {
-                return Chars.findByName(e).weaknesses ?? "";
+                return Chars.findByName(e).weaknesses || "";
             }
             ,
             Guy.GetSkills = function(e) {
-                return Chars.findByName(e).skills ?? "";
+                return Chars.findByName(e).skills || "";
             }
             ,
             Guy.GetShooting = function(e) {
@@ -11716,6 +11814,8 @@ var $lime_init = function($hx_exports, $global) {
                     this.mHandles = Guy.GetHandles(e);
                     this.mResilience = Guy.GetResilience(e);
                     this.mMissRate = 0;
+                    let guy = this;
+                    this.getCritical = () => guy.mCritical - guy.mMissRate;
                     this.bones = this.LoadBones("bro", i, INGAME_$PNG, Guy.preCachedJson, Main.player.broAnimations);
                 },
                 GetOtherGuy: function() {
@@ -24342,7 +24442,7 @@ var $lime_init = function($hx_exports, $global) {
                             var b = Guy.GetStrengths(a);
                             f.align = TextSpriteAlign.LEFT,
                             f.SetText(b),
-                            f.WordWrap(A),
+                            f.WordWrap(A + 999),
                             G += Main.thisMain.isPhone() ? 65 : 45;
                             var M = new TextSprite(70,G,a,Main.CHAT2_FONT);
                             if (null == (Q = !0) && (Q = !1),
@@ -24467,10 +24567,9 @@ var $lime_init = function($hx_exports, $global) {
                             var x = Guy.GetWeaknesses(a);
                             M.align = TextSpriteAlign.LEFT,
                             M.SetText(x),
-                            M.WordWrap(A),
+                            M.WordWrap(A + 999),
                             this.guyInfoBox.children.push(M);// hook skills?
-                            G += Main.thisMain.isPhone() ? 55 : 35;
-                            G += 15;
+                            G += Main.thisMain.isPhone() ? 65 : 45;
                             if (Chars.findByName(a).skills) {
                                 var skills_text = new TextSprite(70,G,a,Main.CHAT2_FONT);
                                 if (null == (Q = !0) && (Q = !1),
@@ -24595,13 +24694,13 @@ var $lime_init = function($hx_exports, $global) {
                                     var b = Guy.GetSkills(a);
                                     skills_text.align = TextSpriteAlign.LEFT,
                                     skills_text.SetText(b),
-                                    skills_text.WordWrap(A),
+                                    skills_text.WordWrap(A + 999),
                                     G += Main.thisMain.isPhone() ? 65 : 45;
                                     // G -= 20;
                                     this.guyInfoBox.children.push(skills_text);
                                 }
                             }
-                            f.WordWrap(1400),
+                            f.WordWrap(1400 + 999),
                             this.guyInfoBox.children.push(f);
                             var G = -54;
                             const that = this;
