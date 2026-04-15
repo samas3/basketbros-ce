@@ -94,6 +94,15 @@ class Util {
     static getPos(obj) {
         return [obj.local_loc.x, obj.local_loc.y];
     }
+    static moveTowards(obj, tx, ty, ratio) {
+        let [x, y] = this.getPos(obj);
+        const dx = tx - x;
+        const dy = ty - y;
+        if (dx === 0 && dy === 0) return;
+        x += dx * ratio;
+        y += dy * ratio;
+        this.setPos(obj, x, y);
+    }
 }
 
 class CharacterFinder {
@@ -135,7 +144,7 @@ class CharacterFinder {
             // starting id 101
             // default weight = 1
             // name, isFemale, shooting, height, hops, speed, handles, defense, strengths, weaknesses, critical, resilience, skills (todo), skill desc, texture
-            ["Jar Tougger", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 20, 6, () => {
+            ["Jar Tougger", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 50, 6, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter == 1) return;
                     for (const guy of Util.getFromName("Jar Tougger")) {
@@ -151,7 +160,7 @@ class CharacterFinder {
                         guy.mHandles *= 0.9;
                         guy.mDefense *= 0.9;
                         guy.mResilience *= 0.9;
-                        guy.mCritical -= 5;
+                        guy.mCritical -= 10;
                         guy.vars.decrease = false;
                     }
                 });
@@ -186,22 +195,12 @@ class CharacterFinder {
             ["Nike Loong", false, 5, 6, 5, 5, 7, 7, "Cute appearence, sturdy build, excellent splendor ability.", "Unstable luck in Genshin Impact wishes.", 0, 8, () => {
                 eventBus.register("punch", (data, event) => {
                     let guy = data.to;
-                    if (guy.charName == "Nike Loong" && data.success) {
-                        let score1 = data.from.score, score2 = guy.score;
-                        guy.vars.immune_chance = 0.2 + 0.05 * (score1 - score2);
-                        if (Math.random() < guy.vars.immune_chance) {
-                            event.ret = {success: false};
-                        }
+                    if (guy.charName == "Nike Loong" && data.success && !guy.vars.punched) {
+                        event.ret = {success: false};
+                        guy.vars.punched = true;
                     }
                 });
-                eventBus.register("time_quarter", (data) => {
-                    for (const guy of Util.getFromName("Nike Loong")) {
-                        let opponent = Util.getOpponent(guy);
-                        let score1 = opponent.score, score2 = guy.score;
-                        guy.vars.immune_chance = 0.2 + 0.05 * (score1 - score2);
-                    }
-                });
-            }, "Has a chance to be immune to punches", "bro_10"],
+            }, "Immune to first punch in each quarter", "bro_10"],
             ["Flee Lane", false, 9, 4, 8, 9, 5, 7, "Unbelievable speed and durability, especially for 1000ms. Sometimes gain the shooting precisement of Step Flurry.", "He will blend into the 2D world someday.", 0, 3, () => {
                 eventBus.register("point", (data) => {
                     let guy = data.guy, other = Util.getOpponent(guy);
@@ -341,8 +340,8 @@ class CharacterFinder {
                     let score1 = guy.score, score2 = other.score;
                     if (guy.charName == "George Beauty") {
                         let total = score2 + score1;
-                        guy.mCritical = total;
-                        other.mMissRate = total;
+                        guy.mCritical = total * 1.5;
+                        other.mMissRate = total * 1.5;
                     }
                 });
             }, "Randomly loses stats at the beginning of each quarter, but gain critical and makes his opponent miss", "bro_9"],
@@ -371,10 +370,11 @@ class CharacterFinder {
                     }
                 });
             }, "Gets temporary shooting while standing still", "bro_19"],
-            ["Squid Oven", false, 10, 7, 4, 5, 6, 2, "Great shooting skills (only when no one is on defence)", "Spends too much time on homework", 0, 9, () => {
+            ["Squid Oven", false, 9, 7, 4, 5, 6, 2, "Great shooting skills (only when no one is on defence)", "Spends too much time on homework", 0, 9, () => {
                 eventBus.register("punch", (data) => {
                     if (data.to.charName == "Squid Oven" && data.success) {
                         data.to.mShooting--;
+                        data.from.mShooting--;
                         Util.addScore(data.to, 1);
                     }
                 });
@@ -406,7 +406,7 @@ class CharacterFinder {
                     if (data.to.charName == "Kay God" && data.success) data.to.mSpeed++;
                 });
             }, "Increases speed when knocked down", "bro_2"],
-            ["Mac King", false, 4, 6, 6, 8, 5, 7, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
+            ["Mac King", false, 3, 3, 3, 3, 3, 3, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || data.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
@@ -513,19 +513,13 @@ class CharacterFinder {
                 });
             }, "Has great punching ability but has chance of getting no points in certain quarters. When triggered, increases opponent's miss rate", "bro_13"],
             ["Turr Toe", false, 7, 3, 5, 7, 9, 6, "Superb verbal expressions, cute, nice haircut", "Needs to pay attention to his glasses when playing. 170.5.", 0, 3, () => {
-                eventBus.register("time_quarter", (data) => {
-                    if (data.quarter < 3) return;
-                    for (const guy of Util.getFromName("Turr Toe")) {
-                        guy.vars.enable = true;
-                    }
-                });
                 eventBus.register("point", (data) => {
                     let guy = data.guy;
-                    if (guy.charName == "Turr Toe" && guy.vars.enable) {
+                    if (guy.charName == "Turr Toe") {
                         if (guy.shotStreak >= 2) guy.onFire = true;
                     }
                 });
-            }, "Gets on fire when goal 2 times in a row in the second half", "bro_16"],
+            }, "Gets on fire when goal 2 times in a row", "bro_16"],
             ["Spine Twister", true, 6, 2, 4, 5, 5, 9, "Slick actions during class (and getting out of classes).", "Needs to pay attention to spine health.", 0, 2, () => {
                 eventBus.register("update", (data) => {
                     let opponent = Util.getOpponent(data.guy);
@@ -571,14 +565,14 @@ class CharacterFinder {
                         Util.setPos(guy, Util.getPos(ball));
                     }
                 });
-            }, "", ""],
+            }, "Teleports to the ball when taunting (once a quarter)", ""],
             ["Question Air", false, 3, 4, 10, 9, 3, 6, "Unbearable eagerness to get answers of any kind. Swift and agile, especially in the last few minutes of class.", "Some questions can be hard to answer, others may don't have answers at all. Has trouble in counting soldiers lying face-down.", 0, 8, () => {
                 eventBus.register("start_quarter", (data) => {
                     for (const guy of guys) {
                         if (data.quarter == 1) {
                             guy.vars.oSpeed = guy.mSpeed;
                         }
-                        guy.vars.sonic = true;
+                        if (guy.charName == "Question Air") guy.vars.sonic = true;
                     }
                 });
                 eventBus.register("update", (data) => {
@@ -594,21 +588,63 @@ class CharacterFinder {
                                 guy.mSpeed = guy.vars.oSpeed;
                             }
                         }
+                    }
+                });
+            }, "Gives sonic speed to players when ball not posessed", ""],
+            ["Lab Bee", false, 2, 7, 4, 4, 4, 5, "Talented in drawing maps, especially in subway lines. Sturdy build with a humble <?>", "Not the best speaker, slow and clumsy. Can make humiliating comments, what's worse, spoken from his mouth, the meanest comments can turn into funny ones.", 50, 5, () => {
+                eventBus.register("time_quarter", (data) => {
+                    for (const guy of Util.getFromName("Lab Bee")) {
+                        if (!guy.vars.lastpos) guy.vars.lastpos = [guy.local_loc.x, guy.local_loc.y];
+                        if (!guy.vars.standing) guy.vars.standing = 0;
+                        if (Math.abs(guy.local_loc.x - guy.vars.lastpos[0]) < 10 && Math.abs(guy.local_loc.y - guy.vars.lastpos[1]) < 10) {
+                            guy.vars.standing++;
+                        }
+                        guy.vars.lastpos = [guy.local_loc.x, guy.local_loc.y];
+                    }
+                });
+                eventBus.register("shoot", (data, event) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Lab Bee" && data.point == 2 && guy.vars.standing >= 6) {
+                        guy.vars.standing = 0;
+                        event.ret = {point: 3};
+                    }
+                });
+            }, "Standing still to gain more points dunking", ""],
+            ["ZT Machine", false, 7, 7, 7, 7, 7, 7, "Skilled at math, more skilled at organizing dancing events. One of the few teachers that actually likes to play basketball, athletic.", "Not so skilled at process sequence writing (mostly in derivatives). Doesn't stand a chance when facing a boss named Wang and a boy named Ren.", 7, 7, () => {
+                eventBus.register("point", (data) => {
+                    for (const guy of Util.getFromName("ZT Machine")) {
+                        if (!guy.vars.scoredNum) guy.vars.scoredNum = 0;
+                        guy.vars.scoredNum++;
+                    }
+                });
+                eventBus.register("shoot", (data, event) => {
+                    for (const guy of Util.getFromName("ZT Machine")) {
+                        if (guy.vars.scoredNum == 6) { // 先shoot再point
+                            event.ret = {point: 7};
+                        }
                     };
                 });
-            }, "", ""],
-            ["Lab Bee", false, 2, 7, 4, 4, 4, 5, "Talented in drawing maps, especially in subway lines. Sturdy build with a humble <?>", "Not the best speaker, slow and clumsy. Can make humiliating comments, what's worse, spoken from his mouth, the meanest comments can turn into funny ones.", 50, 5, () => {
-
-            }, "", ""],
-            ["ZT Machine", false, 7, 7, 7, 7, 7, 7, "Skilled at math, more skilled at organizing dancing events. One of the few teachers that actually likes to play basketball, athletic.", "Not so skilled at process sequence writing (mostly in derivatives). Doesn't stand a chance when facing a boss named Wang and a boy named Ren.", 7, 7, () => {
-
-            }, "", ""],
+            }, "The 7th shot gives 7 points", ""],
             ["Diddy Chacha", false, 5, 6, 7, 6, 5, 9, "Native American. Outstanding fishing skills, unbelievable geography knowledge. Seems to know everything. Will never get hungry, as long as there's peers with food nearby.", "His fishing rod may sometimes hit himself, creating comments like making blind people wear deaf aids. A fat rear can cause some issues.", 0, 6, () => {
-
-            }, "", ""],
+                eventBus.register("taunt", (data) => {
+                    let guy = data.guy, opponent = Util.getOpponent(guy);
+                    if (guy.charName == "Diddy Chacha") {
+                        let pos = Util.getPos(guy);
+                        Util.moveTowards(opponent, pos[0], pos[1], 0.1);
+                    }
+                });
+            }, "Makes opponent move towards him when taunting", ""],
             ["Jen Soor", false, 4, 8, 2, 3, 5, 6, "Tall, always thinks carefully before he speaks. Also experienced in drawing subway maps. Has a huge collection of sweaters.", "Not a great speech giver either, clumsy responding time, can experience system errors when functioning.", 50, 3, () => {
-
-            }, "", ""],
+                eventBus.register("time_quarter", (data) => {
+                    for (const guy of Util.getFromName("Jen Soor")) {
+                        if (!guy.vars.lastpos) guy.vars.lastpos = [guy.local_loc.x, guy.local_loc.y];
+                        if (Math.abs(guy.local_loc.x - guy.vars.lastpos[0]) < 10 && Math.abs(guy.local_loc.y - guy.vars.lastpos[1]) < 10) {
+                            guy.mDefense += 0.3;
+                        }
+                        guy.vars.lastpos = [guy.local_loc.x, guy.local_loc.y];
+                    }
+                });
+            }, "Adds defense when standing still", ""],
             ["Sobby Spur", false, 7, 8, 7, 6, 9, 3, "Humble and friendly, great soccer skills with a silky smooth long-distance shot to match. Skilled in using a cane and walking one-legged.", "Is fan of a soccer team not so worth depending on. Vulnerable to real injuries on the field, too easy to suffer mental injuries in politics class.", 0, 2, () => {
 
             }, "", ""],
@@ -616,6 +652,9 @@ class CharacterFinder {
 
             }, "", ""], 
             ["Wire Tea", false, 6, 5, 8, 7, 4, 10, "Very reliable with great leadership, superb chemistry knowledge. Can always keep the class from an overheated situation. Great player when on defence.", "Stubborn, appearance with a color similar to Nigg Banana. Totally suppressed by his girlfriend.", 0, 7, () => {
+
+            }, "", ""],
+            ["Lover Renboy", false, 0, 0, 0, 0, 0, 0, "", "", 0, 0, () => {
 
             }, "", ""],// page 2
             ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
@@ -809,14 +848,18 @@ class Table {
         this.addPropertyRow('Resilience', guy.mResilience);
 
         switch (guy.charName) {
-            case "Nike Loong":
-                this.addPropertyRow("Immune Punch", guy.vars.immune_chance || 0);
-                break;
             case "Lit Fatter":
                 this.addPropertyRow("Weakens in", (5 - (guy.vars.punchs + 5) % 5) || 0);
                 break;
             case "Poo Tatoo":
                 this.addPropertyRow("Transport", guy.vars.transport || false);
+                break;
+            case "Lab Bee":
+                this.addPropertyRow("Standing Time", guy.vars.standing || 0);
+                break;
+            case "ZT Machine":
+                this.addPropertyRow("Shots Made", guy.vars.scoredNum || 0);
+                break;
         }
     }
 }
