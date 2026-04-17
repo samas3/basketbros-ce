@@ -15,7 +15,7 @@
     },
     {
       "matches": ["https://basketbros.io/*"],
-      "js": ["modify_head.js", "mark.js"]
+      "js": ["util.js"]
     }
   ],
   "declarative_net_request": {
@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css"],
+      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css", "util.js"],
       "matches": ["https://basketbros.io/*"]
     }
   ]
