@@ -704,7 +704,7 @@ class CharacterFinder {
                     }
                 });
             }, "When standing still, the opponent can't pass him with ball possession", "bro_8"],
-            ["Lover Renboy", false, 7, 7, 7, 7, 7, 7, "", "", 7, -7, () => {
+            ["Lover Renboy", false, 7, 7, 7, 7, 7, 7, "Enthusiastic, catchphrase \"hi,\" skilled at making chicken soup.", "Might snatch the drink right out of your hand and start chugging it.", 7, -7, () => {
                 eventBus.register("point", (data) => {
                     for (const guy of Util.getFromName("Lover Renboy")) {
                         if (!guy.vars.scoredNum) guy.vars.scoredNum = 0;
@@ -726,7 +726,7 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Still holds the ball after scoring when he's leading the competition. Complete suppresses ZT Machine.", "bro_20"],// page 2
+            }, "Still holds the ball after scoring when he's leading the competition. Completely suppresses ZT Machine.", "bro_20"],// page 2
             ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
             ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
             }, "", "bro_2"],
@@ -927,6 +927,10 @@ class CharacterFinder {
                 return [1900, 1587, 93, 184];
             case "Bossy Wong":
                 return [1806, 1584, 91, 86];
+            case "Wire Tea":
+                return [630, 1778, 102, 118];
+            case "Lover Renboy":
+                return [472, 1754, 148, 152];
             case "samas 3000":
                 return [1900, 1900, 100, 100];
             case "Candy Queen":
@@ -92474,7 +92478,7 @@ var $lime_init = function($hx_exports, $global) {
                             let dialog = createDialog({ title: 'Control Panel' });
                             let wins = Main.player.wins, losses = Main.player.losses;
                             let name = MainGame.onlineName;
-                            dialog.content.innerHTML += `<p>Name: ${name}</p><p>Wins: ${wins}</p><p>Losses: ${losses}</p>`
+                            dialog.content.innerHTML += `<p>Name: ${name}</p><p>Wins: ${wins}</p><p>Losses: ${losses}</p>`;
                         }
                     }
                     ), this, Main.CHAT_FONT)
