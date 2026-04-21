@@ -563,7 +563,8 @@ class CharacterFinder {
                     if (guy.charName == "Poo Tattoo" && guy.vars.transport) {
                         guy.vars.transport = false;
                         let ball = guy.GetBall();
-                        Util.setPos(guy, Util.getPos(ball));
+                        Util.setPos(guy, ...Util.getPos(ball));
+                        console.log(Util.getPos(guy))
                     }
                 });
             }, "Teleports to the ball when taunting (once a quarter)", "bro_31"],
@@ -1000,6 +1001,7 @@ class Table {
                 this.addPropertyRow("Standing Time", guy.vars.standing || 0);
                 break;
             case "ZT Machine":
+            case "Lover Renboy":
                 this.addPropertyRow("Shots Made", guy.vars.scoredNum || 0);
                 break;
         }
