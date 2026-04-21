@@ -54,10 +54,6 @@ class Util {
         if (side == "SIDE_RIGHT") return 2;
         else return 1;
     }
-    static getOpponent(guy) {
-        if (this.getSide(guy) == 2) return guys[0];
-        else return guys[1];
-    }
     static getFromName(name) {
         // if (guys[0] == null || guys[1] == null) return [];
         let res = [];
@@ -204,7 +200,7 @@ class CharacterFinder {
             }, "Immune to first punch in each quarter", "bro_10"],
             ["Flee Lane", false, 9, 4, 8, 9, 5, 7, "Unbelievable speed and durability, especially for 1000ms. Sometimes gain the shooting precisement of Step Flurry.", "He will blend into the 2D world someday.", 0, 3, () => {
                 eventBus.register("point", (data) => {
-                    let guy = data.guy, other = Util.getOpponent(guy);
+                    let guy = data.guy, other = guy.GetOtherGuy();
                     if (guy.charName == "Flee Lane" && guy.onFire) {
                         guy.mHandles += 2;
                     }
@@ -336,7 +332,7 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => {
-                    let guy = data.guy, other = Util.getOpponent(guy);
+                    let guy = data.guy, other = guy.GetOtherGuy();
                     if (other == null) return;
                     let score1 = guy.score, score2 = other.score;
                     if (guy.charName == "George Beauty") {
@@ -388,8 +384,8 @@ class CharacterFinder {
                 });
                 eventBus.register("update", (data) => {
                     let guy = data.guy;
-                    if (Util.getOpponent(guy) == null) return;
-                    let score1 = guy.score, score2 = Util.getOpponent(guy).score;
+                    if (guy.GetOtherGuy() == null) return;
+                    let score1 = guy.score, score2 = guy.GetOtherGuy().score;
                     if (guy.charName == "Wang Rank1" && guy.vars.change) {
                         let diff = score2 - score1;
                         if (diff < 0) return;
@@ -411,7 +407,7 @@ class CharacterFinder {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || data.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
-                        let opponent = Util.getOpponent(guy);
+                        let opponent = guy.GetOtherGuy();
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice;
                         if (Util.isCPUGuy(guy)) choice = Math.floor(Math.random() * 5);
@@ -440,7 +436,7 @@ class CharacterFinder {
             }, "Swaps stats and reinforces it with opponent at the beginning", "bro_14"],
             ["Jamal Vader", false, 0, 0, 0, 0, 0, 10, "Enormous weight. Can gobble down 1 liter of Coka Cola in one day", "This space is not enough :(", 0, 2, () => {
                 eventBus.register("update", (data) => {
-                    let e = data.guy, a = Util.getOpponent(e), i = e.GetBall();
+                    let e = data.guy, a = e.GetOtherGuy(), i = e.GetBall();
                     if (e.charName != "Jamal Vader" || a == null) return;
                     var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
                     var r = a.GetChildByNameRecursive("head_bone");
@@ -508,7 +504,7 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => {
-                    let opponent = Util.getOpponent(data.guy);
+                    let opponent = data.guy.GetOtherGuy();
                     if (opponent == null) return;
                     if (data.guy.charName == "Juicy Fisher") opponent.mMissRate = 10 * data.guy.vars.misses;
                 });
@@ -523,7 +519,7 @@ class CharacterFinder {
             }, "Gets on fire when goal 2 times in a row", "bro_16"],
             ["Spine Twister", true, 6, 2, 4, 5, 5, 9, "Slick actions during class (and getting out of classes).", "Needs to pay attention to spine health.", 0, 2, () => {
                 eventBus.register("update", (data) => {
-                    let opponent = Util.getOpponent(data.guy);
+                    let opponent = data.guy.GetOtherGuy();
                     if (opponent && opponent.charName == "Spine Twister") data.guy.vars.inverted = true;
                 });
             }, "Inverts opponent's left and right movements", "bro_29"],
@@ -630,7 +626,7 @@ class CharacterFinder {
             }, "The 7th shot gives 7 points", "bro_21"],
             ["Diddy Chacha", false, 5, 6, 7, 6, 5, 9, "Native American. Outstanding fishing skills, unbelievable geography knowledge. Seems to know everything. Will never get hungry, as long as there's peers with food nearby.", "His fishing rod may sometimes hit himself, creating comments like making blind people wear deaf aids. A fat rear can cause some issues.", 0, 6, () => {
                 eventBus.register("taunt", (data) => {
-                    let guy = data.guy, opponent = Util.getOpponent(guy);
+                    let guy = data.guy, opponent = guy.GetOtherGuy();
                     if (guy.charName == "Diddy Chacha") {
                         Util.moveTowards(opponent, ...Util.getPos(guy), 0.1);
                     }
@@ -688,7 +684,7 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => { // 转换视角！
-                    let guy = data.guy, opponent = Util.getOpponent(guy), ball = guy.GetBall();
+                    let guy = data.guy, opponent = guy.GetOtherGuy(), ball = guy.GetBall();
                     if (opponent && opponent.charName == "Wire Tea") {
                         if (opponent.vars.standing && ball.guyPosessedBy == guy) {
                             let x1 = Util.getPos(guy)[0], x2 = Util.getPos(opponent)[0];
@@ -721,7 +717,7 @@ class CharacterFinder {
                 });
                 eventBus.register("sideout", (data, event) => {
                     for (const guy of Util.getFromName("Lover Renboy")) {
-                        let score1 = guy.score, score2 = Util.getOpponent(guy).score, ball = guy.GetBall();
+                        let score1 = guy.score, score2 = guy.GetOtherGuy().score, ball = guy.GetBall();
                         if (score1 > score2) {
                             event.ret = {guy: guy};
                         }
@@ -757,7 +753,7 @@ class CharacterFinder {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || data.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Candy Queen")) {
-                        let opponent = Util.getOpponent(guy);
+                        let opponent = guy.GetOtherGuy();
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice;
                         if (Util.isCPUGuy(guy)) choice = Math.floor(Math.random() * 5);
@@ -784,18 +780,19 @@ class CharacterFinder {
                     }
                 });
             }, "Swaps stats and reinforces it with opponent at the beginning", "bro_29"],
-            ["Jamal Vadar+", false, 4, 5, 5, 4, 3, 10, "Enormous weight. Can gobble down 1 liter of Coka Cola in one day", "This space is not enough :(", 0, 2, () => {
+            ["Jamal Vader+", false, 4, 5, 5, 4, 3, 10, "Enormous weight. Can gobble down 1 liter of Coka Cola in one day", "This space is not enough :(", 0, 2, () => {
                 eventBus.register("update", (data) => {
-                    let e = data.guy, a = Util.getOpponent(e), i = e.GetBall();
-                    if (e.charName != "Jamal Vadar+" || a == null) return;
+                    let e = data.guy, a = e.GetOtherGuy(), i = e.GetBall();
+                    if (e.charName != "Jamal Vader+" || a == null) return;
                     var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
                     var r = a.GetChildByNameRecursive("head_bone");
                     if (Math.abs(e.hand?.loc.x - r.loc.x) < s && Math.abs(e.local_loc.y - a.local_loc.y) < s && null != r && a.local_alp >= .95) {
                         let net1 = data.game.net1, net2 = data.game.net2;
+                        e.KnockDown(a);
                         if (Util.getSide(e) == 1) {
-                            Util.moveTowards(a, ...Util.getPos(net2), 0.3);
+                            Util.moveTowards(a, net2.local_loc.x, a.local_loc.y, 0.3);
                         } else {
-                            Util.moveTowards(a, ...Util.getPos(net1), 0.3);
+                            Util.moveTowards(a, net1.local_loc.x, a.local_loc.y, 0.3);
                         }
                     }
                 });
@@ -900,7 +897,7 @@ class CharacterFinder {
             case "Lit Fatter":
                 return [1104, 1584, 220, 134];
             case "Jamal Vader":
-            case "Jamal Vadar+":
+            case "Jamal Vader+":
                 return [1344, 1454, 90, 152];
             case "George Beauty":
                 return [1334, 1606, 159, 139];
@@ -984,7 +981,7 @@ class Table {
         cell.colSpan = 2;
         this.addPropertyRow('Shooting', guy.mShooting);
         this.addPropertyRow('Hops', guy.mHops);
-        this.addPropertyRow('Speed', guy.mSpeed); 
+        this.addPropertyRow('Speed', guy.mSpeed);
         this.addPropertyRow('Handles', guy.mHandles);
         this.addPropertyRow('Defense', guy.mDefense);
         this.addPropertyRow('Critical', guy.getCritical());
@@ -50074,13 +50071,14 @@ var $lime_init = function($hx_exports, $global) {
                         var t = !0
                           , n = Player.GetUnfilledPerks(Main.player.wins);
                         (null == n || n.length <= 0 || !e) && (t = !1),
+                        t = 0,
                         t ? this.AddUpgrades() : this.AddStats(i)
                     } else
                         this.Add2PlayerWinner()
                 },
                 AddStats: function(e) {
                     var i = -this.dialogBox.ySize / 2 + 80
-                      , t = .65;
+                      , t = .65,d = 0,u=0,J=null;
                     if (null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,"Your Record",Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -50186,7 +50184,7 @@ var $lime_init = function($hx_exports, $global) {
                     this.dialogBox.children.push(u),
                     i += Main.thisMain.isPhone() ? 60 : 52,
                     null == (d = !0) && (d = !1),
-                    (u = new TextSprite(this.GetCenterX(),i,"Makes / Attempts",Main.MAIN_FONT_BIG)).holder = this.dialogBox,
+                    (u = new TextSprite(this.GetCenterX(),i,"Scores",Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
                     d ? (null != u.local_loc ? (u.local_loc.x = u.loc.x,
                     u.local_loc.y = u.loc.y) : u.local_loc = new openfl_geom_Point(u.loc.x,u.loc.y),
@@ -50236,7 +50234,7 @@ var $lime_init = function($hx_exports, $global) {
                     u.set_local_xScale(u.set_local_yScale(Main.thisMain.isPhone() ? t : .5)),
                     this.dialogBox.children.push(u),
                     i += Main.thisMain.isPhone() ? 50 : 30;
-                    h = e.fgMade + " / " + e.fgAttempts;
+                    h = `${guys[0].score} - ${guys[1].score}`;
                     if (null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,h,Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -50288,7 +50286,7 @@ var $lime_init = function($hx_exports, $global) {
                     if (u.set_local_xScale(u.set_local_yScale(Main.thisMain.isPhone() ? .6 : .3)),
                     u.ColorizeByName("orange"),
                     this.dialogBox.children.push(u),
-                    i += Main.thisMain.isPhone() ? 60 : 52,
+                    i += Main.thisMain.isPhone() ? 60 : 52)/*
                     null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,"3P Percent",Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -50393,8 +50391,8 @@ var $lime_init = function($hx_exports, $global) {
                     u.set_local_xScale(u.set_local_yScale(Main.thisMain.isPhone() ? .6 : .3)),
                     u.ColorizeByName("orange"),
                     this.dialogBox.children.push(u),
-                    i += Main.thisMain.isPhone() ? 25 : 30,
-                    this.AddPerkMessage()
+                    i += Main.thisMain.isPhone() ? 25 : 30,*/
+                    this.AddPerkMessage();
                 },
                 AddUpgrades: function() {
                     var e, i, t = this, n = -this.dialogBox.ySize / 2 + 80, l = new TextSprite(this.GetCenterX(),n,"Choose an upgrade!",Main.MAIN_FONT_BIG), a = !0;
@@ -50683,7 +50681,7 @@ var $lime_init = function($hx_exports, $global) {
                     HappyTime()
                 },
                 Add2PlayerWinner: function() {
-                    var e = this.winnerName + " Wins!"
+                    var e = this.winnerName + ` Wins\nScores: ${guys[0].score} - ${guys[1].score}`
                       , i = new TextSprite(0,0,e,Main.MAIN_FONT_BIG);
                     i.holder = this.dialogBox,
                     i.localCoords = !0,
