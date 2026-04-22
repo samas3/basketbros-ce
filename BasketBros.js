@@ -63,7 +63,7 @@ class Util {
         return res;
     }
     static addScore(guy, score) {
-        let panel = this.game.thisMG.panel;
+        let panel = this.game.panel;
         guy.score += score;
         if (this.getSide(guy) == 2) panel.lastSideScored = -1;
         else panel.lastSideScored = 1;
