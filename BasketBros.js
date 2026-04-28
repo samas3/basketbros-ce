@@ -379,23 +379,16 @@ class CharacterFinder {
             ["Wang Rank1", true, 6, 3, 4, 5, 10, 5, "Rank 1 position in academic scores, sometimes even followed by an AK achievement.", "Sleepy, turns red easily.", 0, 10, () => {
                 eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Wang Rank1")) {
-                        guy.vars.change = true;
-                    }
-                });
-                eventBus.register("update", (data) => {
-                    let guy = data.guy;
-                    if (guy.GetOtherGuy() == null) return;
-                    let score1 = guy.score, score2 = guy.GetOtherGuy().score;
-                    if (guy.charName == "Wang Rank1" && guy.vars.change) {
+                        if (guy.GetOtherGuy() == null) continue;
+                        let score1 = guy.score, score2 = guy.GetOtherGuy().score;
                         let diff = score2 - score1;
-                        if (diff < 0) return;
+                        if (diff < 0) continue;
                         guy.mShooting += diff / 2;
                         guy.mHops += diff / 2;
                         guy.mSpeed += diff / 2;
                         guy.mDefense += diff / 2;
                         guy.mHandles -= diff;
                     }
-                    guy.vars.change = false;
                 });
             }, "Becomes much stronger in each quarter based on score difference", "bro_24"],
             ["Kay God", false, 10, 3, 5, 7, 10, 5, "Probably the best shooter in the game, near perfect attacking player, godlike position in the game.", "He's not humble enough", 0, 9, () => {
@@ -403,7 +396,7 @@ class CharacterFinder {
                     if (data.to.charName == "Kay God" && data.success) data.to.mSpeed++;
                 });
             }, "Increases speed when knocked down", "bro_2"],
-            ["Mac King", false, 3, 3, 3, 3, 3, 3, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
+            ["Mac King", false, 3, 6, 3, 3, 3, 3, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || data.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
@@ -496,7 +489,7 @@ class CharacterFinder {
                 });
                 eventBus.register("shoot", (data, event) => {
                     let guy = data.guy;
-                    if (guy.charName == "Juicy Fisher" && guy.vars.boost) {
+                    if (guy.charName == "Juicy Fisher") {
                         if (Math.random() < 0.3) {
                             event.ret = {point: 0};
                             guy.vars.misses++;
@@ -504,9 +497,10 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => {
-                    let opponent = data.guy.GetOtherGuy();
+                    let guy = data.guy;
+                    let opponent = guy.GetOtherGuy();
                     if (opponent == null) return;
-                    if (data.guy.charName == "Juicy Fisher") opponent.mMissRate = 10 * data.guy.vars.misses;
+                    if (guy.charName == "Juicy Fisher") opponent.mMissRate = 10 * guy.vars.misses;
                 });
             }, "Has great punching ability but has chance of getting no points in certain quarters. When triggered, increases opponent's miss rate", "bro_13"],
             ["Turr Toe", false, 7, 3, 5, 7, 9, 6, "Superb verbal expressions, cute, nice haircut", "Needs to pay attention to his glasses when playing. 170.5.", 0, 3, () => {
@@ -567,25 +561,21 @@ class CharacterFinder {
             ["Question Air", false, 3, 4, 10, 9, 3, 6, "Unbearable eagerness to get answers of any kind. Swift and agile, especially in the last few minutes of class.", "Some questions can be hard to answer, others may don't have answers at all. Has trouble in counting soldiers lying face-down.", 0, 8, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.main.player.practiceMode) return;
-                    for (const guy of guys) {
+                    for (const guy of Util.getFromName("Question Air")) {
                         if (data.quarter == 1) {
                             guy.vars.oSpeed = guy.mSpeed;
+                            guy.vars.sonic = true;
                         }
-                        if (guy.charName == "Question Air") guy.vars.sonic = true;
                     }
                 });
                 eventBus.register("update", (data) => {
-                    let self = data.guy;
-                    let ball = self.GetBall();
-                    if (self.vars.sonic && ball) {
+                    let guy = data.guy;
+                    let ball = guy.GetBall();
+                    if (guy.vars.sonic && ball && guy.charName == "Question Air") {
                         if (ball.guyPosessedBy == null) {
-                            for (const guy of guys) {
-                                guy.mSpeed = 100;
-                            }
+                            guy.mSpeed = 100;
                         } else {
-                            for (const guy of guys) {
-                                guy.mSpeed = guy.vars.oSpeed;
-                            }
+                            guy.mSpeed = guy.vars.oSpeed;
                         }
                     }
                 });
@@ -628,7 +618,7 @@ class CharacterFinder {
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy, opponent = guy.GetOtherGuy();
                     if (guy.charName == "Diddy Chacha") {
-                        Util.moveTowards(opponent, ...Util.getPos(guy), 0.1);
+                        Util.moveTowards(opponent, ...Util.getPos(guy), 0.2);
                     }
                 });
             }, "Makes opponent move towards him when taunting", "bro_4"],
@@ -672,8 +662,9 @@ class CharacterFinder {
                 });
             }, "Enters overtime and gets critical at the end of game", "bro_27"], 
             ["Wire Tea", false, 6, 5, 8, 7, 4, 10, "Very reliable with great leadership, superb chemistry knowledge. Can always keep the class from an overheated situation. Great player when on defence.", "Stubborn, appearance with a color similar to Nigg Banana. Totally suppressed by his girlfriend.", 0, 7, () => {
-                eventBus.register("time_quarter", (data) => {
-                    for (const guy of Util.getFromName("Wire Tea")) {
+                eventBus.register("update", (data) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Wire Tea") {
                         if (!guy.vars.lastpos) guy.vars.lastpos = Util.getPos(guy);
                         if (Math.abs(guy.local_loc.x - guy.vars.lastpos[0]) < 10 && Math.abs(guy.local_loc.y - guy.vars.lastpos[1]) < 10) {
                             guy.vars.standing = true;
@@ -701,7 +692,7 @@ class CharacterFinder {
                     }
                 });
             }, "When standing still, the opponent can't pass him with ball possession", "bro_8"],
-            ["Lover Renboy", false, 7, 7, 7, 7, 7, 7, "Enthusiastic, catchphrase \"hi,\" skilled at making chicken soup.", "Might snatch the drink right out of your hand and start chugging it.", 7, -7, () => {
+            ["Lover Renboy", false, 7, 7, 7, 7, 7, 7, "Enthusiastic, catchphrase \"hi,\" skilled at making chicken soup.", "Might snatch the drink right out of your hand and start chugging it.", -7, 7, () => {
                 eventBus.register("point", (data) => {
                     for (const guy of Util.getFromName("Lover Renboy")) {
                         if (!guy.vars.scoredNum) guy.vars.scoredNum = 0;
@@ -718,7 +709,7 @@ class CharacterFinder {
                 eventBus.register("sideout", (data, event) => {
                     for (const guy of Util.getFromName("Lover Renboy")) {
                         let score1 = guy.score, score2 = guy.GetOtherGuy().score, ball = guy.GetBall();
-                        if (score1 > score2) {
+                        if (score1 < score2) {
                             event.ret = {guy: guy};
                         }
                     }
@@ -786,7 +777,7 @@ class CharacterFinder {
                     if (e.charName != "Jamal Vader+" || a == null) return;
                     var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
                     var r = a.GetChildByNameRecursive("head_bone");
-                    if (Math.abs(e.hand?.loc.x - r.loc.x) < s && Math.abs(e.local_loc.y - a.local_loc.y) < s && null != r && a.local_alp >= .95) {
+                    if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
                         let net1 = data.game.net1, net2 = data.game.net2;
                         e.KnockDown(a);
                         if (Util.getSide(e) == 1) {
