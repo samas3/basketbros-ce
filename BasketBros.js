@@ -554,7 +554,6 @@ class CharacterFinder {
                         guy.vars.transport = false;
                         let ball = guy.GetBall();
                         Util.setPos(guy, ...Util.getPos(ball));
-                        console.log(Util.getPos(guy))
                     }
                 });
             }, "Teleports to the ball when taunting (once a quarter)", "bro_31"],
