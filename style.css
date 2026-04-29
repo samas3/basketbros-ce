@@ -109,3 +109,8 @@
     padding: 16px;
     overflow: auto;
 }
+
+.vertical-div {
+    display: flex;
+    gap: 10px;
+}

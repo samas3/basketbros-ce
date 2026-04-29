@@ -5,7 +5,10 @@ style.type = 'text/css';
 style.href = chrome.runtime.getURL('style.css');
 var script = document.createElement('script');
 script.src = chrome.runtime.getURL('util.js');
+var script2 = document.createElement('script');
+script2.src = chrome.runtime.getURL('api.js');
 head.appendChild(script);
+head.appendChild(script2);
 head.appendChild(style);
 
 const versionMark = document.createElement('div');

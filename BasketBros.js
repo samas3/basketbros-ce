@@ -931,14 +931,18 @@ class Table {
     constructor(pos) {
         this.element = document.createElement('div');
         this.element.className = `stats-table ${pos}`;
+        this.pos = pos;
         
         this.table = document.createElement('table');
         this.body = this.table.createTBody();
         this.element.appendChild(this.table);
         let element = this.element;
-        document.addEventListener('DOMContentLoaded', () => {
-            document.body.appendChild(element);
-        });
+
+        if (pos) {
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.appendChild(element);
+            });
+        }
     }
     addPropertyRow(propName, propValue) {
         const row = this.body.insertRow();
@@ -965,10 +969,7 @@ class Table {
         while (this.table.rows.length > 0) {
             this.table.deleteRow(0);
         }
-        let row = this.body.insertRow();
-        let cell = row.insertCell(0);
-        cell.textContent = guy.charName;
-        cell.colSpan = 2;
+        this.addPropertyRow(guy.charName, (this.pos == "right" ? COMP.namer : COMP.namel));
         this.addPropertyRow('Shooting', guy.mShooting);
         this.addPropertyRow('Hops', guy.mHops);
         this.addPropertyRow('Speed', guy.mSpeed);
@@ -1036,6 +1037,114 @@ eventBus.register("time_quarter", (data) => {
         if (data.quarter == 1) data.game._shotPoints = 3;
     }
 })
+// competition mode
+const COMP = {
+    name1: null,
+    name2: null,
+    namel: null,
+    namer: null,
+    char1: null,
+    char2: null,
+    score1: 0,
+    score2: 0,
+    delta1: 0,
+    delta2: 0,
+    onCompetition: false,
+    dialog: null,
+    matches: null,
+    scores: null,
+    Main: null,
+    MainGame: null,
+    invalidate: async () => {
+        let wins = COMP.Main.player.wins, losses = COMP.Main.player.losses;
+        let name = COMP.MainGame.onlineName;
+
+        COMP.matches = await BasketBrosAPI.getMatches();
+        COMP.scores = await BasketBrosAPI.getScores();
+
+        COMP.dialog.content.innerHTML = '';
+        COMP.dialog.content.insertAdjacentHTML("afterbegin", `<p>Name: ${name} | Competition Status: ${COMP.onCompetition}</p>
+        <div class="vertical-div">
+            <p>Wins: ${wins}</p>
+            <input type="button" onclick=COMP.start() value="Start Competition">
+        </div>
+        <div class="vertical-div">
+            <p>Losses: ${losses}</p>
+            <input type="button" onclick=COMP.stop() value="Stop Competition">
+        </div><hr>Total matches: ${COMP.matches.matches}`);
+
+        let table = new Table();
+        table.element.style.top = 'auto';
+        COMP.dialog.content.appendChild(table.element);
+        let keys = Object.keys(COMP.scores).sort((a, b) => COMP.scores[b] - COMP.scores[a]);
+        table.addPropertyRow("Player", "Score");
+        for (const i of keys) {
+            table.addPropertyRow(i, COMP.scores[i]);
+        }
+    },
+    createControlPanel: async (Main, MainGame) => {
+        COMP.dialog = createDialog({ title: 'Control Panel', width: 800, height: 600 });
+        COMP.Main = Main;
+        COMP.MainGame = MainGame;
+        await COMP.invalidate();
+    },
+    start: async () => {
+        COMP.onCompetition = true;
+        await COMP.invalidate();
+    },
+    stop: async () => {
+        COMP.onCompetition = false;
+        await BasketBrosAPI.setScore(COMP.name1, COMP.score1 + COMP.delta1);
+        await BasketBrosAPI.setScore(COMP.name2, COMP.score2 + COMP.delta2);
+        Object.assign(COMP, { name1: null, name2: null, namel: null, namer: null, char1: null, char2: null, score1: 0, score2: 0, delta1: 0, delta2: 0 });
+        await COMP.invalidate();
+    },
+    onEndGame: async (char1, char2, winner) => {
+        let x, y;
+        if (winner == 1) {
+            x = Math.ceil(Math.max((COMP.score2 - COMP.score1) / 10, 5));
+            y = -Math.ceil(Math.max((COMP.score2 - COMP.score1) / 10, 5));
+        } else {
+            y = Math.ceil(Math.max((COMP.score1 - COMP.score2) / 10, 5));
+            x = -Math.ceil(Math.max((COMP.score1 - COMP.score2) / 10, 5));
+        }
+        if (COMP.name1 == COMP.namer && COMP.name2 == COMP.namel) {
+            [ x, y ] = [ y, x ];
+            winner = 3 - winner;
+            [ char2, char1 ] = [ char1, char2 ];
+        }
+        let name1 = COMP.name1, name2 = COMP.name2;
+        await BasketBrosAPI.recordMatch({ name1, name2, char1, char2, winner });
+        COMP.delta1 += x;
+        COMP.delta2 += y;
+    }
+};
+
+eventBus.register("start_game", async (data) => {
+    if (!COMP.onCompetition) {
+        alert("Competition mode is off");
+        return;
+    }
+    let name1 = prompt("(Competition mode) Side LEFT player name:")
+    let name2 = prompt("(Competition mode) Side RIGHT player name:");
+    if (COMP.name1 == null && COMP.name2 == null) {
+        COMP.name1 = COMP.namel = name1;
+        COMP.name2 = COMP.namer = name2;
+        let score1 = COMP.scores[name1] ?? 100;
+        let score2 = COMP.scores[name2] ?? 100;
+        if (COMP.scores[name1] == undefined) {
+            await BasketBrosAPI.registerPlayer(name1);
+        }
+        if (COMP.scores[name2] == undefined) {
+            await BasketBrosAPI.registerPlayer(name2);
+        }
+        COMP.score1 = score1;
+        COMP.score2 = score2;
+    } else {
+        COMP.namel = name1;
+        COMP.namer = name2;
+    }
+});
 
 var $lime_init = function($hx_exports, $global) {
     "use strict";
@@ -9887,6 +9996,7 @@ var $lime_init = function($hx_exports, $global) {
                 Main.ResetTiming(),
                 Main.thisMain.HideSideBanners(),
                 Main.children.push(new MainGame(e)); // hook enter game
+                eventBus.fire("start_game", { game: MainGame.thisMG, main: Main });
                 table1.show();
                 if (!Main.player.practiceMode) table2.show();
                 Util.init(Main, MainGame.thisMG);
@@ -50673,6 +50783,7 @@ var $lime_init = function($hx_exports, $global) {
                 Add2PlayerWinner: function() {
                     var e = this.winnerName + ` Wins\nScores: ${guys[0].score} - ${guys[1].score}`
                       , i = new TextSprite(0,0,e,Main.MAIN_FONT_BIG);
+                    COMP.onEndGame(guys[0].charName, guys[1].charName, guys[0].score > guys[1].score ? 1 : 2);
                     i.holder = this.dialogBox,
                     i.localCoords = !0,
                     null != i.local_loc ? i.local_loc.x = i.local_loc.y = 0 : i.local_loc = new openfl_geom_Point(0,0),
@@ -91954,9 +92065,9 @@ var $lime_init = function($hx_exports, $global) {
                         }
                         ), this.aGrouping, Main.CHAT_FONT);
                     else {
-                        this.playOnlineButton = titlescreen_TitleScreen.AddImageButton("Play Now!", INGAME_$PNG.BU_PLAY_UP_PNG, INGAME_$PNG.BU_PLAY_HOVER_PNG, 0, s, 1, 1, 0, (function() {
-                            SendEvent("event", "start_1p_local_game"),
-                            i.StartSinglePlayer()
+                        this.playOnlineButton = titlescreen_TitleScreen.AddImageButton("Let's GO!", INGAME_$PNG.BU_PLAY_UP_PNG, INGAME_$PNG.BU_PLAY_HOVER_PNG, 0, s, 1, 1, 0, (function() {
+                            i.StartTwoPlayer(),
+                            SendEvent("event", "start_2p_local_game")
                         }
                         ), this.aGrouping, Main.CHAT_FONT)
                     }
@@ -91968,9 +92079,9 @@ var $lime_init = function($hx_exports, $global) {
                     }
                     ,
                     s += Main.thisMain.isPhone() ? 75 : 87,
-                    Main.thisMain.isPhone() || (e || (this.twoPlayerButton = titlescreen_TitleScreen.AddImageButton("2 PLAYERS SAME PC", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, -r, s, .6666667, .7, 0, (function() {
-                        i.StartTwoPlayer(),
-                        SendEvent("event", "start_2p_local_game")
+                    Main.thisMain.isPhone() || (e || (this.twoPlayerButton = titlescreen_TitleScreen.AddImageButton("SINGLEPLAYER", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, -r, s, .6666667, .7, 0, (function() {
+                            SendEvent("event", "start_1p_local_game"),
+                            i.StartSinglePlayer()
                     }
                     ), this.aGrouping)),
                     s += 40);
@@ -91979,11 +92090,11 @@ var $lime_init = function($hx_exports, $global) {
                         i.StartFranchise(),
                         SendEvent("event", "start_1p_local_game")
                     }
-                    ), this.aGrouping)),*/
+                    ), this.aGrouping)),
                     e || titlescreen_TitleScreen.AddImageButton("New: BBTI", INGAME_$PNG.BU_2PLAYER_UP_PNG, INGAME_$PNG.BU_2PLAYER_HOVER_PNG, -r, s, f, .7, 0, function() {
                         window.location.href = 'https://samas3.github.io/bbti';
                     }, this.aGrouping),
-                    s += Main.thisMain.isPhone() ? 55 : 40,
+                    s += Main.thisMain.isPhone() ? 55 : 40,*/
                     e || (this.tournamentButton = titlescreen_TitleScreen.AddImageButton("Shooting Practice", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, -r, s, f, .7, 0, (function() {
                         i.StartPractice(),
                         SendEvent("event", "start_practice")
@@ -92465,10 +92576,7 @@ var $lime_init = function($hx_exports, $global) {
                     var W = titlescreen_TitleScreen.AddImageButton("Control Panel", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, 0, 0, f, .7, 0, (function() {
                         if (i.die = 0,
                         null == i.GetChildByName("dialog")) {
-                            let dialog = createDialog({ title: 'Control Panel' });
-                            let wins = Main.player.wins, losses = Main.player.losses;
-                            let name = MainGame.onlineName;
-                            dialog.content.innerHTML += `<p>Name: ${name}</p><p>Wins: ${wins}</p><p>Losses: ${losses}</p>`;
+                            COMP.createControlPanel(Main, MainGame);
                         }
                     }
                     ), this, Main.CHAT_FONT)

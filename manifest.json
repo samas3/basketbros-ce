@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BasketBros++",
-  "version": "1.3",
+  "version": "1.3.101",
   "description": "Basketbros Community Edition",
   "permissions": ["scripting", "declarativeNetRequest"],
   "host_permissions": [
@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css", "util.js"],
+      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css", "util.js", "api.js"],
       "matches": ["https://basketbros.io/*"]
     }
   ]
