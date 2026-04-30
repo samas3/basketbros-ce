@@ -713,7 +713,7 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Still holds the ball after scoring when he's leading the competition. Completely suppresses ZT Machine.", "bro_20"],// page 2
+            }, "Still holds the ball after scoring when he's behind the opponent. Completely suppresses ZT Machine.", "bro_20"],// page 2
             ["Jar Tougger+", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 100, 6, () => {}, "", "bro_3"],
             ["Trey Youth+", false, 10, 10, 10, 10, 10, 10, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 10, () => {
             }, "", "bro_2"],
