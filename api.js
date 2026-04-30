@@ -1,7 +1,7 @@
 // BasketBros CE - Client API Module
 // 客户端 API 调用封装，用于与后端服务器通信
 
-const API_BASE_URL = 'https://zcxjames.top:56387';
+const API_BASE_URL = 'https://zcxjames.top/bb';
 
 /**
  * 通用请求函数
