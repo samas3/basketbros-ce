@@ -172,7 +172,7 @@ class CharacterFinder {
                     }
                 });
             }, "Becomes on fire in the final time", "bro_18"],
-            ["Dad Penguin", false, 4, 4, 6, 7, 9, 5, "Steady handling with a firm build. Does a huge amount of workout during the off season.", "He's too into Jan Soarant.", 0, 3, () => {
+            ["Dad Penguin", false, 7, 4, 6, 7, 9, 5, "Steady handling with a firm build. Does a huge amount of workout during the off season.", "He's too into Jan Soarant.", 0, 3, () => {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Dad Penguin")) {
                         let ball = guy.GetBall();
@@ -776,7 +776,7 @@ class CharacterFinder {
                     if (e.charName != "Jamal Vader+" || a == null) return;
                     var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
                     var r = a.GetChildByNameRecursive("head_bone");
-                    if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
+                    if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && null != r && a.local_alp >= .95) {
                         let net1 = data.game.net1, net2 = data.game.net2;
                         e.KnockDown(a);
                         if (Util.getSide(e) == 1) {
