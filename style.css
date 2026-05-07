@@ -1,9 +1,7 @@
 .stats-table {
-    position: absolute;
     top: 25%;
     z-index: 1000;
     font-family: Arial, sans-serif;
-    background: rgba(255, 0, 0, 0.3);
     border-radius: 8px;
     font-size: 10px;
 }

@@ -931,6 +931,10 @@ class Table {
     constructor(pos) {
         this.element = document.createElement('div');
         this.element.className = `stats-table ${pos}`;
+        if (pos) {
+            this.element.style.position = 'absolute';
+            this.element.style.background = 'rgba(255, 0, 0, 0.3)';
+        }
         this.pos = pos;
         
         this.table = document.createElement('table');
@@ -1061,6 +1065,7 @@ const COMP = {
 
         COMP.matches = await BasketBrosAPI.getMatches();
         COMP.scores = await BasketBrosAPI.getScores();
+        COMP.rates = await BasketBrosAPI.getRates();
 
         COMP.dialog.content.innerHTML = '';
         COMP.dialog.content.insertAdjacentHTML("afterbegin", `<p>Name: ${name} | Competition Status: ${COMP.onCompetition}</p>
@@ -1073,14 +1078,32 @@ const COMP = {
             <input type="button" onclick=COMP.stop() value="Stop Competition">
         </div><hr>Total matches: ${COMP.matches.matches}`);
 
+        let div = document.createElement('div');
+        div.className = 'vertical-div';
+        const HEIGHT = '60%';
+        div.style.cssText = `height: ${HEIGHT}; overflow: scroll`;
+        let wrapper = document.createElement('div');
         let table = new Table();
         table.element.style.top = 'auto';
-        COMP.dialog.content.appendChild(table.element);
+        wrapper.appendChild(table.element);
+        div.appendChild(wrapper);
         let keys = Object.keys(COMP.scores).sort((a, b) => COMP.scores[b] - COMP.scores[a]);
         table.addPropertyRow("Player", "Score");
         for (const i of keys) {
             table.addPropertyRow(i, COMP.scores[i]);
         }
+
+        let wrapper2 = document.createElement('div');
+        let table2 = new Table();
+        table2.element.style.top = 'auto';
+        wrapper2.appendChild(table2.element);
+        div.appendChild(wrapper2);
+        let keys2 = Object.keys(COMP.rates).sort((a, b) => COMP.rates[b] - COMP.rates[a]);
+        table2.addPropertyRow("Characters", "Win Rate");
+        for (const i of keys2) {
+            table2.addPropertyRow(i, `${Math.round(COMP.rates[i] * 10000) / 100}%`);
+        }
+        COMP.dialog.content.appendChild(div);
     },
     createControlPanel: async (Main, MainGame) => {
         COMP.dialog = createDialog({ title: 'Control Panel', width: 800, height: 600 });
