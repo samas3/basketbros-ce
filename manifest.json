@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BasketBros++",
-  "version": "1.3",
+  "version": "2.0",
   "description": "Basketbros Community Edition",
   "permissions": ["scripting", "declarativeNetRequest"],
   "host_permissions": [

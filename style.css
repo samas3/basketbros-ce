@@ -2,7 +2,6 @@
     position: absolute;
     top: 25%;
     z-index: 1000;
-    font-family: Arial, sans-serif;
     background: rgba(255, 0, 0, 0.3);
     border-radius: 8px;
     font-size: 10px;
@@ -43,7 +42,6 @@
     bottom: 5px;
     right: 5px;
     z-index: 1000;
-    font-family: Arial, sans-serif;
     background: rgba(255, 0, 0, 0.3);
     border-radius: 8px;
     padding: 5px 15px;
@@ -108,4 +106,21 @@
     flex: 1;
     padding: 16px;
     overflow: auto;
+}
+
+.vertical-div {
+    display: flex;
+}
+
+.boss-table td {
+    padding: 5px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: cyan;
+    font-weight: bold;
+}
+
+.boss-table table {
+    border-collapse: collapse;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
