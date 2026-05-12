@@ -151,7 +151,7 @@ class CharacterFinder {
             // starting id 101
             // default weight = 1
             // name, isFemale, shooting, height, hops, speed, handles, defense, strengths, weaknesses, critical, resilience, skills (todo), skill desc, texture
-            ["Jar Tougger", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 50, 6, () => {
+            ["Jar Tougger", false, 5, 7, 8, 7, 7, 8, "Super Lucky. Unbreakable glasses", "He especially likes eating chicken strips.", 40, 6, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter == 1) return;
                     for (const guy of Util.getFromName("Jar Tougger")) {
@@ -480,13 +480,6 @@ class CharacterFinder {
                 });
             }, "Add some stats points at random quarter", "bro_1"],
             ["Juicy Fisher", false, 4, 5, 5, 6, 4, 8, "Can freely manipulate the time her goes to school, often appears from nowhere.", "His haircut has a negative impact on his eyesight, thinks about people's mothers too much.", 0, 10, () => {
-                eventBus.register("start_quarter", (data) => {
-                    if (data.quarter == 1) {
-                        for (const guy of Util.getFromName("Juicy Fisher")) {
-                            guy.vars.misses = 0;
-                        }
-                    }
-                });
                 eventBus.register("punch", (data, event) => {
                     let guy = data.from;
                     if (guy.charName == "Juicy Fisher") {
@@ -496,15 +489,9 @@ class CharacterFinder {
                         var r = a.GetChildByNameRecursive("head_bone");
                         if (Math.abs(e.hand?.loc.x - r.loc.x) < s * 2 && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
                             event.ret = {success: true};
-                        }
-                    }
-                });
-                eventBus.register("shoot", (data, event) => {
-                    let guy = data.guy;
-                    if (guy.charName == "Juicy Fisher") {
-                        if (Math.random() < 0.3) {
-                            event.ret = {point: 0};
+                            if (!guy.vars.misses) guy.vars.misses = 0;
                             guy.vars.misses++;
+
                         }
                     }
                 });
@@ -512,9 +499,9 @@ class CharacterFinder {
                     let guy = data.guy;
                     let opponent = guy.GetOtherGuy();
                     if (opponent != null) return;
-                    if (guy.charName == "Juicy Fisher") opponent.mMissRate = 10 * guy.vars.misses;
+                    if (guy.charName == "Juicy Fisher") opponent.mMissRate = 20 * guy.vars.misses;
                 });
-            }, "Has great punching ability but has chance of getting no points in certain quarters. When triggered, increases opponent's miss rate", "bro_13"],
+            }, "Has great punching ability. When punched, increases opponent's miss rate", "bro_13"],
             ["Turr Toe", false, 7, 3, 5, 7, 9, 6, "Superb verbal expressions, cute, nice haircut", "Needs to pay attention to his glasses when playing. 170.5.", 0, 3, () => {
                 eventBus.register("point", (data) => {
                     let guy = data.guy;
@@ -604,7 +591,7 @@ class CharacterFinder {
                 });
                 eventBus.register("shoot", (data, event) => {
                     let guy = data.guy;
-                    if (guy.charName == "Lab Bee" && data.point == 2 && guy.vars.standing >= 6) {
+                    if (guy.charName == "Lab Bee" && data.point == 2 && guy.vars.standing >= 8) {
                         guy.vars.standing = 0;
                         event.ret = {point: 3};
                     }
@@ -638,7 +625,7 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("Jen Soor")) {
                         if (!guy.vars.lastpos) guy.vars.lastpos = Util.getPos(guy);
                         if (Math.abs(guy.local_loc.x - guy.vars.lastpos[0]) < 10 && Math.abs(guy.local_loc.y - guy.vars.lastpos[1]) < 10) {
-                            guy.mDefense += 0.3;
+                            guy.mDefense += 0.2;
                         }
                         guy.vars.lastpos = Util.getPos(guy);
                     }
@@ -647,16 +634,11 @@ class CharacterFinder {
             ["Sobby Spur", false, 7, 8, 7, 6, 9, 3, "Humble and friendly, great soccer skills with a silky smooth long-distance shot to match. Skilled in using a cane and walking one-legged.", "Is fan of a soccer team not so worth depending on. Vulnerable to real injuries on the field, too easy to suffer mental injuries in politics class.", 0, 2, () => {
                 eventBus.register("punch", (data) => {
                     let from = data.from, to = data.to;
-                    let net1 = data.game.net1, net2 = data.game.net2;
-                    if (from.charName == "Sobby Spur" && data.success) {
-                        if (Util.getSide(from) == 1) {
-                            Util.moveTowards(to, ...Util.getPos(net2), 0.3);
-                        } else {
-                            Util.moveTowards(to, ...Util.getPos(net1), 0.3);
-                        }
+                    if (to.charName == "Sobby Spur" && data.success) {
+                        to.ReleaseShot();
                     }
                 });
-            }, "Makes opponent fly towards the net when punching", "bro_25"],
+            }, "Makes the ball fly towards opponent's net when punched", "bro_25"],
             ["Bossy Wong", false, 9, 7, 4, 3, 9, 3, "Precise calculation, comprehensive question tackling, and one-of-a-kind perspectives. May be the only student in the class to have a real \"adult\" mindset.", "Horrible Chinese comprehension, can make rigid remarks sometimes. Once not so aware of timing, but he's doing much better these days.", 0, 6, () => {
                 eventBus.register("endgame", (data, event) => {
                     for (const guy of Util.getFromName("Bossy Wong")) {
@@ -810,17 +792,30 @@ class CharacterFinder {
             }, "Immune to punch and can punch anyone anywhere", "bro_10"],
             ["Flee Lane +", false, 9, 4, 8, 9, 5, 7, "Unbelievable speed and durability, especially for 1000ms. Sometimes gain the shooting precisement of Step Flurry.", "He will blend into the 2D world someday.", 0, 3, () => {
                 eventBus.register("update", (data) => {
-                    let guy = data.guy;
-                    if (guy.charName == "Flee Lane +") {
+                    let guy = data.guy, opponent = guy.GetOtherGuy();
+                    if (guy.charName == "Flee Lane +" && opponent) {
                         guy.local_xScale = 0;
+                        opponent.local_xScale = 0;
                     }
                 });
+                /*eventBus.register("time_quarter", (data) => {
+                    for (const guy of Util.getFromName("Flee Lane +")) {
+                        let opponent = guy.GetOtherGuy();
+                        if (!guy.vars.swapped) guy.vars.swapped = false;
+                        if (Math.random() < 1 / 20) {
+                            guy.vars.swapped = !guy.vars.swapped;
+                            let selfpos = Util.getPos(guy), otherpos = Util.getPos(opponent);
+                            Util.setPos(opponent, selfpos);
+                            Util.setPos(guy, otherpos);
+                        }
+                    }
+                });*/
                 eventBus.register("punch", (data) => {
                     if (data.from.charName == "Flee Lane +" && data.success) {
                         data.from.GetBall().guyPosessedBy = data.from;
                     }
                 });
-            }, "He really blends into the 2D world now, with just a shadow left", "bro_6"],
+            }, "He really blends into the 2D world now, with just a shadow left. Also makes others blend too.", "bro_6"],
             ["Pan Butcher +", false, 6, 5, 6, 8, 5, 5, "Geoguesser freak, 1000m that even rivals Flee Lane.", "Lacks persistence and confidence in official competition, can sometimes quit games.", 0, 5, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter == 1) {
@@ -1565,6 +1560,8 @@ class Table {
                 break;
             case "Spine Twister +":
                 this.addPropertyRow("Switch directions", guy.GetOtherGuy().vars.inverted || false);
+            // case "Flee Lane +":
+            //     this.addPropertyRow("Swapped positions", guy.vars.swapped || false);
         }
     }
 }
