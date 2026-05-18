@@ -1,15 +1,7 @@
 ## Changes
-- Fixed some bug
-- Removed pictures on loading screen
-- Modified skill of characters:
-  - Dad Penguin
-  - Juicy Fisher
-  - Jar Tougger
-  - Jen Soor
-  - Lab Bee
+- Fixed bugs of some bosses
+  - fatal: boss challenge is empty
+- Modified skills of bosses
+- Fixed text mistakes
 ## What's new
-- New mode: Boss Challenge
-  - EVERY custom character has their special form
-  - Great skills & stats reinforcement
-  - Gets achievements after defeating boss
-- New mechanism: Multiple critical.
+- Brand new boss introductions
