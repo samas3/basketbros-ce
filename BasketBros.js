@@ -776,7 +776,15 @@ class CharacterFinder {
                         guy.KnockDown(guy.GetOtherGuy());
                     }
                 });
-            }, "Knocks down the opponent when they are jumping", "bro_18"],
+                eventBus.register("time_quarter", (data) => {
+                    if (data.quarter != 4) return;
+                    if (data.time == 20) {
+                        for (const guy of Util.getFromName("CD Player +")) {
+                            guy.onFire = true;
+                        }
+                    }
+                });
+            }, "Knocks down the opponent when they are jumping, becomes on fire in the final time", "bro_18"],
             ["Dad Penguin +", false, 7, 4, 6, 7, 9, 5, "Sizzled pork is no more now, he is back in the form of ... Iron Snout!", "", 0, 3, () => {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Dad Penguin +")) {
@@ -1205,14 +1213,7 @@ class CharacterFinder {
             ["Lab Bee +", false, 2, 7, 4, 4, 4, 5, "Take your time to think about what he just said, hopefully there would be an answer.", "", 50, 5, () => {
                 eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Lab Bee +")) {
-                        if (data.quarter == 1) {
-                            guy.vars.paralyze = false;
-                            guy.vars.last_quarter = 0;
-                        } else if (guy.vars.last_quarter + 1 == data.quarter) {
-                            guy.vars.paralyze = true;
-                        } else if (guy.vars.last_quarter + 1 < data.quarter) {
-                            guy.vars.paralyze = false;
-                        }
+                        guy.vars.paralyze = false;
                     }
                     for (const guy of guys) {
                         if (guy.GetOtherGuy().charName == "Lab Bee +") {
@@ -1223,7 +1224,7 @@ class CharacterFinder {
                 eventBus.register("point", (data) => {
                     let guy = data.guy;
                     if (guy.charName == "Lab Bee +") {
-                        guy.vars.last_quarter = clock.quarter;
+                        guy.vars.paralyze = true;
                     }
                 });
                 eventBus.register("update", (data) => {
@@ -1232,8 +1233,8 @@ class CharacterFinder {
                         Util.setPos(guy, ...guy.vars.begin_pos);
                     }
                 });
-            }, "If got score in one quarter, paralyzes opponent in the next", "bro_5"],
-            ["ZT Machine +", false, 7, 7, 7, 7, 7, 7, "All questions are worth 14 points, you'll have to hand it in, but it's not a test.", "", 7, 77, () => {
+            }, "If got score, paralyzes opponent in this quarter", "bro_5"],
+            ["ZT Machine +", false, 7, 7, 7, 7, 7, 7, "All questions are worth 14 points, you'll have to hand it in, but it's not a test.", "", 77, 7, () => {
                 eventBus.register("point", (data) => {
                     for (const guy of Util.getFromName("ZT Machine +")) {
                         if (!guy.vars.scoredNum) guy.vars.scoredNum = 0;
