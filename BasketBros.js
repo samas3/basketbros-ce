@@ -587,7 +587,7 @@ class CharacterFinder {
                     }
                 });
             }, "Gives sonic speed to players when ball not possessed", "bro_26"],
-            ["Lab Bee", false, 2, 7, 4, 4, 4, 5, "Talented in drawing maps, especially in subway lines. Sturdy build with a humble <?>", "Not the best speaker, slow and clumsy. Can make humiliating comments, what's worse, spoken from his mouth, the meanest comments can turn into funny ones.", 50, 5, () => {
+            ["Lab Bee", false, 2, 7, 4, 4, 4, 5, "Talented in drawing maps, especially in subway lines. Sturdy build with a humble <?>", "Not the best speaker, slow and clumsy. Can make humiliating comments, what's worse, spoken from his mouth, the meanest comments can turn into funny ones.", 30, 5, () => {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Lab Bee")) {
                         if (!guy.vars.lastpos) guy.vars.lastpos = Util.getPos(guy);
@@ -600,7 +600,7 @@ class CharacterFinder {
                 });
                 eventBus.register("shoot", (data, event) => {
                     let guy = data.guy;
-                    if (guy.charName == "Lab Bee" && data.point == 2 && guy.vars.standing >= 8) {
+                    if (guy.charName == "Lab Bee" && data.point == 2 && guy.vars.standing >= 6) {
                         guy.vars.standing = 0;
                         event.ret = {point: 3};
                     }
@@ -629,7 +629,7 @@ class CharacterFinder {
                     }
                 });
             }, "Makes opponent move towards him when taunting", "bro_4"],
-            ["Jen Soor", false, 4, 8, 2, 3, 5, 6, "Tall, always thinks carefully before he speaks. Also experienced in drawing subway maps. Has a huge collection of sweaters.", "Not a great speech giver either, clumsy responding time, can experience system errors when functioning.", 50, 3, () => {
+            ["Jen Soor", false, 4, 8, 2, 3, 5, 6, "Tall, always thinks carefully before he speaks. Also experienced in drawing subway maps. Has a huge collection of sweaters.", "Not a great speech giver either, clumsy responding time, can experience system errors when functioning.", 30, 3, () => {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Jen Soor")) {
                         if (!guy.vars.lastpos) guy.vars.lastpos = Util.getPos(guy);
@@ -883,14 +883,14 @@ class CharacterFinder {
                         switch (data.quarter) { // 依旧小巧思
                             case 4:
                             case 1:
-                                if (data.time == 59) {
+                                if (data.time == 58) {
                                     guy.mCritical = guy.vars.oCritical + 400;
                                 } else if (data.time == 1) {
                                     guy.mCritical = guy.vars.oCritical;
                                 }
                                 if (data.quarter != 4) break;
                             case 2:
-                                if (data.time == 59) {
+                                if (data.time == 58) {
                                     guy.mShooting = 10;
                                     guy.mHops = 10;
                                     guy.mSpeed = 10;
@@ -906,7 +906,7 @@ class CharacterFinder {
                                 }
                                 if (data.quarter != 4) break;
                             case 3:
-                                if (data.time == 59) {
+                                if (data.time == 58) {
                                     guy.onFire = true;
                                 } else if (data.time == 1) {
                                     guy.onFire = false;
@@ -1099,24 +1099,17 @@ class CharacterFinder {
             ["Champion Yellow +", false, 8, 6, 5, 7, 6, 3, "Wait a second, is this the finals?", "", 0, 4, () => {
                 eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Champion Yellow +")) {
-                        let idx = Math.floor(Math.random() * 5);
-                        switch (idx) {
-                            case 0:
-                                guy.mShooting += 12;
-                                break;
-                            case 1:
-                                guy.mHops += 12;
-                                break;
-                            case 2:
-                                guy.mSpeed += 12;
-                                break;
-                            case 3:
-                                guy.mHandles += 12;
-                                break;
-                            case 4:
-                                guy.mDefense += 12;
-                                break;
+                        let parts = new Array(5).fill(0);
+                        let points = 12;
+                        for (let i = 0; i < points; i++) {
+                            let randomIndex = Math.floor(Math.random() * 5);
+                            parts[randomIndex]++;
                         }
+                        guy.mShooting += parts[0];
+                        guy.mHops += parts[1];
+                        guy.mSpeed += parts[2];
+                        guy.mDefense += parts[3];
+                        guy.mHandles += parts[4];
                         guy.mCritical += 50;
                     }
                 });
@@ -1188,7 +1181,7 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("Poo Tattoo +")) {
                         if (!guy.vars.timer) guy.vars.timer = 0;
                         guy.vars.timer++;
-                        if (guy.vars.timer == 3) {
+                        if (guy.vars.timer == 2) {
                             let ball = guy.GetBall();
                             Util.setPos(guy, ...Util.getPos(ball));
                             guy.vars.timer = 0;
@@ -1269,7 +1262,7 @@ class CharacterFinder {
                 eventBus.register("punch", (data) => {
                     if (data.from.charName == "Jen Soor +" && data.success) {
                         data.to.vars.begin_pos = Util.getPos(data.to);
-                        data.to.paralyze = true;
+                        data.to.vars.paralyze = true;
                     }
                 });
                 eventBus.register("update", (data) => {
@@ -1479,11 +1472,11 @@ class CharacterFinder {
             case "Bio Bee":
                 return [160, 1604, 96, 92];
             case "Lil Du2ian":
-                return [265, 1585, 126, 160];
+                return [275, 1585, 126, 160];
             case "Poo Tattoo":
                 return [1923, 1476, 106, 106];
             case "Question Air":
-                return [391, 1722, 95, 96];
+                return [391, 1722, 85, 96];
             case "Lab Bee":
                 return [1795, 1450, 136, 136];
             case "ZT Machine":
