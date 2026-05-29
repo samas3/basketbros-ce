@@ -1,2 +1,7 @@
 ## Changes
 - Fixed bugs of some bosses
+- Modified skills for bosses:
+  - Flee Lane +
+  - Lit Fatter +
+- Fix bot punch logic
+- Fix texture errors

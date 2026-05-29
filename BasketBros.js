@@ -1,4 +1,4 @@
-const out_ = (x) => console.log(x);
+const out_ = (...x) => console.log(...x);
 out_('Code by Trey Youth')
 
 setInterval(() => {
@@ -41,9 +41,15 @@ class EventBus {
 class Util {
     constructor() {
     }
-    static init(main, maingame) {
+    static init(main, maingame, misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides) {
+        out_('Util init');
         this.main = main;
         this.game = maingame;
+        this.misc = misc;
+        this.BundlerData = BundlerData;
+        this.INGAME_$PNG = INGAME_$PNG;
+        this.openfl_geom_Rectangle = openfl_geom_Rectangle;
+        this.HxOverrides = HxOverrides;
     }
     static shortName(name) {
         let [f, l] = name.split(" ");
@@ -69,9 +75,9 @@ class Util {
         else panel.lastSideScored = 1;
         panel.ScoreEvent(score);
     }
-    static getTexture(x, y, w, h, BundlerData, INGAME_$PNG, openfl_geom_Rectangle) {
-        BundlerData.rect = new openfl_geom_Rectangle(x, y, w, h);
-        return INGAME_$PNG.Get();
+    static getTexture(x, y, w, h) {
+        this.BundlerData.rect = new (this.openfl_geom_Rectangle)(x, y, w, h);
+        return this.INGAME_$PNG.Get();
     }
     static criticalBase(guy) {
         let rate = guy.getCritical();
@@ -417,7 +423,7 @@ class CharacterFinder {
             }, "Increases speed when knocked down", "bro_2"],
             ["Mac King", false, 3, 6, 3, 3, 3, 3, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
                 eventBus.register("start_game", (data) => {
-                    if (data.quarter != 1 || data.main.player.practiceMode) return;
+                    if (data.quarter != 1 || Util.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
                         let opponent = guy.GetOtherGuy();
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
@@ -567,7 +573,7 @@ class CharacterFinder {
             }, "Teleports to the ball when taunting (once a quarter)", "bro_31"],
             ["Question Air", false, 3, 4, 10, 9, 3, 6, "Unbearable eagerness to get answers of any kind. Swift and agile, especially in the last few minutes of class.", "Some questions can be hard to answer, others may don't have answers at all. Has trouble in counting soldiers lying face-down.", 0, 8, () => {
                 eventBus.register("start_quarter", (data) => {
-                    if (data.main.player.practiceMode) return;
+                    if (Util.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Question Air")) {
                         if (data.quarter == 1) {
                             guy.vars.oSpeed = guy.mSpeed;
@@ -721,25 +727,25 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("samas 3000")) {
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice = parseInt(prompt(`(Side ${side}) Input Shooting`));
-                        guy.mShooting = choice;
+                        guy.mShooting = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Hops`));
-                        guy.mHops = choice;
+                        guy.mHops = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Speed`));
-                        guy.mSpeed = choice;
+                        guy.mSpeed = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Defense`));
-                        guy.mDefense = choice;
+                        guy.mDefense = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Handles`));
-                        guy.mHandles = choice;
+                        guy.mHandles = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Critical`));
-                        guy.mCritical = choice;
+                        guy.mCritical = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Resilience`));
-                        guy.mResilience = choice;
+                        guy.mResilience = choice || 0;
                     }
                 });
             }, "", "bro_3"],
             ["Candy Queen", true, 10, 10, 10, 10, 10, 10, "Best person in the world :) Queenlike domination on Mac King.", "If I dare.", 0, 10, () => {
                 eventBus.register("start_quarter", (data) => {
-                    if (data.quarter != 1 || data.main.player.practiceMode) return;
+                    if (data.quarter != 1 || Util.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Candy Queen")) {
                         let opponent = guy.GetOtherGuy();
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
@@ -813,26 +819,17 @@ class CharacterFinder {
                     if (guy.charName == "Flee Lane +" && opponent) {
                         guy.local_xScale = 0;
                         opponent.local_xScale = 0;
-                    }
-                });
-                /*eventBus.register("time_quarter", (data) => {
-                    for (const guy of Util.getFromName("Flee Lane +")) {
-                        let opponent = guy.GetOtherGuy();
-                        if (!guy.vars.swapped) guy.vars.swapped = false;
-                        if (Math.random() < 1 / 20) {
-                            guy.vars.swapped = !guy.vars.swapped;
-                            let selfpos = Util.getPos(guy), otherpos = Util.getPos(opponent);
-                            Util.setPos(opponent, selfpos);
-                            Util.setPos(guy, otherpos);
+                        if (Util.game?.tickCounter % 90 == 0) {
+                            Util.game.CycleLights(999);
                         }
                     }
-                });*/
+                });
                 eventBus.register("punch", (data) => {
                     if (data.from.charName == "Flee Lane +" && data.success) {
                         data.from.GetBall().guyPosessedBy = data.from;
                     }
                 });
-            }, "Makes all characters invisible", "bro_6"],
+            }, "Makes all characters invisible, summons Frierens onto the field", "bro_6"],
             ["Pan Butcher +", false, 6, 5, 6, 8, 5, 5, "PVP mode, international region, health check, map ready, loading picutres, let's go!", "", 0, 5, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter == 1) {
@@ -926,7 +923,13 @@ class CharacterFinder {
                     }
                 })
             }, "Dunk score = 7 * quarter number", "bro_33"],
-            ["Lit Fatter +", false, 7, 100, 5, 5, 8, 100, "", "", 0, 7, () => {}, "Super high with big fists", "bro_23"],
+            ["Lit Fatter +", false, 7, 20, 5, 5, 8, 100, "", "", 0, 7, () => {
+                eventBus.register("punch", (data, event) => {
+                    if (data.to.charName == "Lit Fatter +") {
+                        event.ret = {success: false};
+                    }
+                })
+            }, "Super high with big fists, won't be knocked down", "bro_23"],
             ["George Beauty +", true, 5, 6, 5, 5, 6, 7, "It's an 100% chance that you'll lose your temper when you get aced by him in volley-balloon, and in basketball the same.", "", 0, 6, () => {
                 eventBus.register("point", (data) => {
                     let guy = data.guy, opponent = guy.GetOtherGuy();
@@ -1066,7 +1069,7 @@ class CharacterFinder {
             ["Kay God +", false, 100, 3, 5, 100, 100, 100, "Now there's no need for him to stay humble.", "", 100, 100, () => {}, "Perfect physical quality", "bro_2"],
             ["Mac King +", false, 0, 6, 0, 0, 0, 0, "Better run, someone just insulted his girlfriend.", "", 0, 0, () => {
                 eventBus.register("start_quarter", (data) => {
-                    if (data.quarter != 1 || data.main.player.practiceMode) return;
+                    if (data.quarter != 1 || Util.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King +")) {
                         let opponent = guy.GetOtherGuy();
                         [ guy.mShooting, opponent.mShooting ] = [ opponent.mShooting + 3, guy.mShooting ];
@@ -1086,7 +1089,7 @@ class CharacterFinder {
                     var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
                     var r = a.GetChildByNameRecursive("head_bone");
                     if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && null != r && a.local_alp >= .95) {
-                        let net1 = data.game.net1, net2 = data.game.net2;
+                        let net1 = Util.game.net1, net2 = Util.game.net2;
                         e.KnockDown(a);
                         if (Util.getSide(e) == 1) {
                             Util.moveTowards(a, net2.local_loc.x, a.local_loc.y, 0.3);
@@ -1171,8 +1174,8 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => {
-                    if (data.guy.charName == "Bio Bee +" && data.guy.score >= 15 && data.game.mode._hx_name == "MODE_PLAYING") {
-                        data.game.InitPostGame(data.guy);
+                    if (data.guy.charName == "Bio Bee +" && data.guy.score >= 15 && Util.game.mode._hx_name == "MODE_PLAYING") {
+                        Util.game.InitPostGame(data.guy);
                     }
                 })
             }, "Gets more points while dunking, wins the game after getting a certain score", "bro_28"],
@@ -1277,7 +1280,7 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("Sobby Spur +")) {
                         if (!guy.vars.timer) guy.vars.timer = 0;
                         guy.vars.timer++;
-                        let net1 = data.game.net1, net2 = data.game.net2;
+                        let net1 = Util.game.net1, net2 = Util.game.net2;
                         let pos;
                         if (Util.getSide(guy.GetOtherGuy()) == 1) pos = Util.getPos(net2);
                         else pos = Util.getPos(net1);
@@ -1306,9 +1309,9 @@ class CharacterFinder {
                 eventBus.register("endgame", (data, event) => {
                     for (const guy of Util.getFromName("Bossy Wong +")) {
                         let score1 = guy.score, score2 = guy.GetOtherGuy().score;
-                        if (data.game.mode._hx_name == "MODE_PLAYING") {
-                            if (score1 > score2) data.game.InitPostGame(guy);
-                            else if (score1 < score2 - 20) data.game.InitPostGame(guy.GetOtherGuy());
+                        if (Util.game.mode._hx_name == "MODE_PLAYING") {
+                            if (score1 > score2) Util.game.InitPostGame(guy);
+                            else if (score1 < score2 - 20) Util.game.InitPostGame(guy.GetOtherGuy());
                             else event.ret = {end: false};
                         }
                     }
@@ -1317,7 +1320,7 @@ class CharacterFinder {
             ["Wire Tea +", false, 6, 5, 8, 7, 4, 10, "His girlfriend gave him his hoop, and he won't let anyone touch it.", "", 0, 7, () => {
                 eventBus.register("update", (data) => { // 转换视角！
                     let guy = data.guy, opponent = guy.GetOtherGuy(), ball = guy.GetBall();
-                    if (data.game.tickCounter % 15 != 0) return;
+                    if (Util.game?.tickCounter % 15 != 0) return;
                     if (opponent?.charName == "Wire Tea +" && ball.body) {
                         let x1 = Util.getPos(guy)[0], x2 = Util.getPos(opponent)[0], xb = Util.getPos(ball)[0];
                         if (!guy.vars.facing) {
@@ -1346,8 +1349,15 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("Lover Renboy +")) {
                         if (!guy.vars.timer) guy.vars.timer = 0;
                         guy.vars.timer++;
+                        let ball = guy.GetBall();
                         if (guy.vars.timer == 3) {
-                            guy.GetBall().guyPosessedBy = guy;
+                            ball.guyPosessedBy = guy;
+                            ball.DoPosessed();
+                            null == ball.firstGuyPosessedBy && (ball.firstGuyPosessedBy = guy);
+                            var l = guy.GetOtherGuy();
+                            Util.HxOverrides.remove(ball.holder.children, guy),
+                            ball.holder.children.splice(ball.holder.children.indexOf(ball), 0, guy),
+                            ball.hitFloor = !1,
                             guy.vars.timer = 0;
                         }
                     }
@@ -1630,7 +1640,7 @@ let lastTimer = 0;
 eventBus.register("timer", (data) => {
     for (let i = 0; i < 60; i++) {
         if (data.time < lastTimer && data.time == i) {
-            eventBus.fire("time_quarter", { time: i, quarter: data.quarter, main: data.main, game: data.game });
+            eventBus.fire("time_quarter", { time: i, quarter: data.quarter });
             clock.quarter = data.quarter;
             clock.seconds = i;
         }
@@ -1641,7 +1651,7 @@ eventBus.register("point", (data) => {
     if (data.critical > 0) {
         let i = 0;
         let interval = setInterval(() => {
-            data.misc.AddFlash(data.guy.GetBall(), 0, 2, 2);
+            Util.misc.AddFlash(data.guy.GetBall(), 0, 2, 2);
             i++;
             if (i > 10) clearInterval(interval);
         }, 10);
@@ -1649,8 +1659,8 @@ eventBus.register("point", (data) => {
 });
 eventBus.register("time_quarter", (data) => {
     if (data.time == 59) { // hook time
-        eventBus.fire("start_quarter", { quarter: data.quarter, game: data.game, main: data.main });
-        if (data.quarter == 1) data.game._shotPoints = 3;
+        eventBus.fire("start_quarter", { quarter: data.quarter });
+        if (data.quarter == 1) Util.game._shotPoints = 3;
     }
 });
 eventBus.register("post_game", (data) => {
@@ -10521,10 +10531,10 @@ var $lime_init = function($hx_exports, $global) {
                 Main.ResetTiming(),
                 Main.thisMain.HideSideBanners(),
                 Main.children.push(new MainGame(e)); // hook enter game
-                eventBus.fire("start_game", { game: MainGame.thisMG, main: Main });
+                eventBus.fire("start_game", {});
                 table1.show();
                 if (!Main.player.practiceMode) table2.show();
-                Util.init(Main, MainGame.thisMG);
+                Util.init(Main, MainGame.thisMG, Misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides);
             }
             ,
             Main.InitFranchise = function() {
@@ -12310,7 +12320,7 @@ var $lime_init = function($hx_exports, $global) {
                 if (!flag) {
                     let pos = Chars.getAvatar(e);
                     if (pos != null) {
-                        i.Init(Util.getTexture(...pos, BundlerData, INGAME_$PNG, openfl_geom_Rectangle))
+                        i.Init(Util.getTexture(...pos));
                     }
                 }
                 return i
@@ -12655,7 +12665,7 @@ var $lime_init = function($hx_exports, $global) {
                 },
                 lastX: null,
                 update: function() {
-                    eventBus.fire("update", { guy: this, game: MainGame.thisMG, main: Main });
+                    eventBus.fire("update", { guy: this });
                     this.topSpeed = 7.3 + this.mSpeed / 10;
                     this.jumpSpeed = 14 + .9 * this.mHops;
                     var e = this.GetMovement(4);
@@ -12755,9 +12765,9 @@ var $lime_init = function($hx_exports, $global) {
                         null != e && i ? e.guyPosessedBy == this ? this.InitSetShot() : this.InitPunch() : null == this.GetTauntMovement() || null != e && e.guyPosessedBy == this ? this.ySpeed < -.01 ? (this.mode = Modes.MODE_JUMPING,
                         this.tookOffWithBall = null != e && e.guyPosessedBy == this,
                         this.bones.PlayAnimation(this.GetJumpInAnim(), !1),
-                        Misc.PlaySound(JUMP_$WAV.Get()), eventBus.fire("jump", { guy: this, game: MainGame.thisMG, main: Main })) : Math.abs(this.xSpeed) > .3 && null != e && (e.mode != BallModes.HOVERING || Math.abs(this.xSpeed) > 2) && (this.mode = Modes.MODE_WALKING,
+                        Misc.PlaySound(JUMP_$WAV.Get()), eventBus.fire("jump", { guy: this })) : Math.abs(this.xSpeed) > .3 && null != e && (e.mode != BallModes.HOVERING || Math.abs(this.xSpeed) > 2) && (this.mode = Modes.MODE_WALKING,
                         this.bones.PlayAnimation(this.GetWalkAnim(), !0, 300, this.walkAnimSpeed),
-                        this.SetupWalkSounds()) : (this.Celebrate(this.GetTauntMovement()), eventBus.fire("taunt", { guy: this, game: MainGame.thisMG, main: Main }))
+                        this.SetupWalkSounds()) : (this.Celebrate(this.GetTauntMovement()), eventBus.fire("taunt", { guy: this }))
                     }
                 },
                 SetupWalkSounds: function() {},
@@ -12818,11 +12828,11 @@ var $lime_init = function($hx_exports, $global) {
                                     a instanceof Guy && a != e) {
                                         var o = a
                                           , s = 50 + 2 * e.mDefense;
-                                        null != o && (s -= 2 * o.mHandles),
-                                        e instanceof CPUGuy && (s = null != o && o.score - 2 > e.score ? 100 : 50);
+                                        null != o && (s -= 2 * o.mHandles);
+                                        // e instanceof CPUGuy && (s = null != o && o.score - 2 > e.score ? 100 : 50);
                                         var r = a.GetChildByNameRecursive("head_bone");
                                         let success_punch = Math.abs(e.hand.loc.x - r.loc.x) < s && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95;
-                                        let ret = eventBus.fire("punch", { from: e, to: a, game: MainGame.thisMG, success: success_punch, main: Main });
+                                        let ret = eventBus.fire("punch", { from: e, to: a, success: success_punch });
                                         if (ret.success != null) success_punch = ret.success;
                                         if (success_punch) {
                                             e.steals++,
@@ -12986,7 +12996,7 @@ var $lime_init = function($hx_exports, $global) {
                         this.tookOffWithBall = null != e && e.guyPosessedBy == this,
                         this.bones.PlayAnimation(this.GetJumpInAnim(), !1),
                         Misc.PlaySound(JUMP_$WAV.Get()),
-                        eventBus.fire("jump", { guy: this, game: MainGame.thisMG, main: Main })) : Math.abs(this.xSpeed) <= .3 && (this.mode = Modes.MODE_IDLE,
+                        eventBus.fire("jump", { guy: this })) : Math.abs(this.xSpeed) <= .3 && (this.mode = Modes.MODE_IDLE,
                         this.bones.PlayAnimation(this.GetIdleAnim(), !0, 200))
                     }
                 },
@@ -13017,20 +13027,23 @@ var $lime_init = function($hx_exports, $global) {
                     var e = this.GetBall()
                       , i = this.GetOtherGuy();
                     if (null != i && this.ySpeed < 0 && Math.abs(this.ySpeed) < 5 && e.guyPosessedBy != this && (i.mode == Modes.MODE_DUNKING || e.isShot) && e.shotBy != this && "block" != this.bones.currentAnim && !e.IsAboveRim() && null != i && (i.mode == Modes.MODE_DUNKING || e.ySpeed < 0) && Misc.distance2(this.hand.loc.x, this.hand.loc.y, e.loc.x, e.loc.y) < 100 && MainGame.thisMG.mode == GameModes.MODE_PLAYING) {
-                        this.bones.PlayAnimation("block", !1, 50, 1.5),
-                        this.JustHitBall(),
-                        this.ySpeed -= 5,
-                        Misc.PlaySound(ORGANIC_$WHOOSH_$07_$WAV.Get()),
-                        Misc.ShakeScreen(),
-                        Misc.AddFlash(this.hand, 0, 4, 4),
-                        null != i && (i.shotStreak = 0, i.onFire = false),
-                        null != i && i.mode == Modes.MODE_DUNKING && (i.KillAllMovements(),
-                        this.KnockDown(i)),
-                        e.guyPosessedBy = null,
-                        e.mode = BallModes.IN_PLAY;
-                        var t = this.bones.local_xScale;
-                        e.body.velocity.x = 70 * (t > 0 ? 1 : t < 0 ? -1 : 0),
-                        e.grabCounter = 40
+                        let ret = eventBus.fire("block", { from: i, to: o });
+                        if (ret.success != false) {
+                            this.bones.PlayAnimation("block", !1, 50, 1.5),
+                            this.JustHitBall(),
+                            this.ySpeed -= 5,
+                            Misc.PlaySound(ORGANIC_$WHOOSH_$07_$WAV.Get()),
+                            Misc.ShakeScreen(),
+                            Misc.AddFlash(this.hand, 0, 4, 4),
+                            null != i && (i.shotStreak = 0, i.onFire = false),
+                            null != i && i.mode == Modes.MODE_DUNKING && (i.KillAllMovements(),
+                            this.KnockDown(i)),
+                            e.guyPosessedBy = null,
+                            e.mode = BallModes.IN_PLAY;
+                            var t = this.bones.local_xScale;
+                            e.body.velocity.x = 70 * (t > 0 ? 1 : t < 0 ? -1 : 0),
+                            e.grabCounter = 40
+                        }
                     }
                     var n = this.GetYMovement()
                       , l = this.GetPunchMovement()
@@ -13054,13 +13067,13 @@ var $lime_init = function($hx_exports, $global) {
                             var n = this.side == Sides.SIDE_LEFT ? MainGame.rimX2 : MainGame.rimX1
                               , l = Math.abs(this.local_loc.x - n);
                             if (this.fgAttempts++,
-                            l < 400 && this.mode != Modes.MODE_DUNKING) {
+                            l < (this.charName == "Lit Fatter +" ? 4000 : 400) && this.mode != Modes.MODE_DUNKING) {
                                 MainGame._shotPoints = 2;
                                 let critical = Util.criticalBase(this);
                                 let missed = Util.isMissed(this);
                                 MainGame.critical = critical;
                                 if (missed) MainGame._shotPoints = 0;
-                                let ret = eventBus.fire("shoot", { guy: this, game: MainGame.thisMG, critical: MainGame.critical, point: 2, main: Main });
+                                let ret = eventBus.fire("shoot", { guy: this, critical: MainGame.critical, point: 2 });
                                 if (ret.point != null) MainGame._shotPoints = ret.point;
                                 this.bones.PlayAnimation(this.GetRandomDunk(), !1),
                                 this.mode = Modes.MODE_DUNKING,
@@ -13124,11 +13137,8 @@ var $lime_init = function($hx_exports, $global) {
                                         if (++l,
                                         o instanceof Guy && o != i && Math.abs(i.local_loc.x - o.local_loc.x) < 150)
                                             if (o.mode == Modes.MODE_JUMPING) {
-                                                let ret = eventBus.fire("block", { from: i, to: o, game: MainGame.thisMG, main: Main });
-                                                if (ret.success != false) {
-                                                    i.KnockDown(o, 3e3);
-                                                    n = !0;
-                                                }
+                                                i.KnockDown(o, 3e3);
+                                                n = !0;
                                             }
                                     }
                                     //if (2 != i.shotStreak)
@@ -13225,7 +13235,7 @@ var $lime_init = function($hx_exports, $global) {
                                     let missed = Util.isMissed(this);
                                     MainGame.critical = critical;
                                     if (missed) MainGame._shotPoints = 0;
-                                    let ret = eventBus.fire("shoot", { guy: this, game: MainGame.thisMG, critical: MainGame.critical, point: 3, main: Main });
+                                    let ret = eventBus.fire("shoot", { guy: this, critical: MainGame.critical, point: 3 });
                                     if (ret.point != null) MainGame._shotPoints = ret.point;
                                 }
                         }
@@ -13259,7 +13269,7 @@ var $lime_init = function($hx_exports, $global) {
                         i.body.velocity.x = Math.round(r),
                         i.body.velocity.y = Math.round(I),
                         Misc.PlaySound(ORGANIC_$WHOOSH_$07_$WAV.Get());
-                        eventBus.fire("releaseshot", { guy: this, game: MainGame.thisMG, ball: i, main: Main });
+                        eventBus.fire("releaseshot", { guy: this, ball: i });
                     }
                 },
                 PlayShotSound: function() {
@@ -13630,7 +13640,7 @@ var $lime_init = function($hx_exports, $global) {
                         var l = null != i && i.score - 2 > this.score ? 10 - Main.player.difficulty + 10 : 15 + 10 * (10 - Main.player.difficulty);
                         if (l -= Math.floor(1.5 * this.mDefense),
                         Main.player.wins < 10 ? l *= 7 : Main.player.wins < 25 && (l *= 5),
-                        2 == Rnd.integer(0, Math.max(l, 3)) && Math.abs(this.local_loc.x - this.runToX) < 130)
+                        2 == Rnd.integer(0, Math.max(l, 3)) && Math.abs(this.hand.loc.x - i.loc.x) < (50 + 2 * this.mDefense - 2 * i.mHandles) * 2)
                             return !0
                     }
                     return !1
@@ -18859,10 +18869,10 @@ var $lime_init = function($hx_exports, $global) {
                     null == e && (e = 1);
                     for (var i = .18, t = 1, n = 0; n < 20; ) {
                         n++;
-                        var l = Rnd.float(.5, 1.5, !0)
-                          , a = Misc.AddFlash(this.bknd2, Rnd.integer(0, 2200, !0), l, l, 1);
-                        a.local_loc.x = Rnd.float(-this.bknd2.rect.width / 2, this.bknd2.rect.width / 2, !0),
-                        a.local_loc.y = Rnd.float(-this.bknd2.rect.height / 2, this.bknd2.rect.height / 2, !0)
+                        var l = Rnd.float(.5, (e == 999 ? 5 : 1.5), !0)
+                          , a = Misc.AddFlash(this.bknd2, Rnd.integer(0, 2200, !0), l, l, 1, e == 999 ? Util.getTexture(0, 1456, 121, 105) : null);
+                        a.local_loc.x = Rnd.float(-this.bknd2.rect.width / 2, this.bknd2.rect.width, !0),
+                        a.local_loc.y = Rnd.float(-this.bknd2.rect.height / 2, this.bknd2.rect.height, !0)
                     }
                     n = 0;
                     for (var o = this.lights; n < o.length; ) {
@@ -19122,7 +19132,7 @@ var $lime_init = function($hx_exports, $global) {
                                                 MainGame.thisMG.panel.AddPopText("FROM THE PARKING LOT!")
                                             }
                                     }
-                                    eventBus.fire("point", { guy: a, game: this, main: Main, misc: Misc, point: MainGame._shotPoints, critical: MainGame.critical });
+                                    eventBus.fire("point", { guy: a, game: this, misc: Misc, point: MainGame._shotPoints, critical: MainGame.critical });
                                 }
                         }
                     }
@@ -19156,7 +19166,7 @@ var $lime_init = function($hx_exports, $global) {
                     this.mode = GameModes.MODE_POST_GAME,
                     this.SaveFranchiseStats(e.side),
                     Main.SaveGlobals();// hook end game
-                    eventBus.fire("post_game", { game: MainGame.thisMG, main: Main, winner: e });
+                    eventBus.fire("post_game", { winner: e });
                     table1.hide();
                     table2.hide();
                 },
@@ -19909,15 +19919,16 @@ var $lime_init = function($hx_exports, $global) {
                 e.set_alp(0)
             }
             ,
-            Misc.AddFlash = function(e, i, t, n, l) {
+            Misc.AddFlash = function(e, i, t, n, l, png) {
                 null == l && (l = 1),
                 null == n && (n = 0),
                 null == t && (t = 0),
                 null == i && (i = 0),
+                null == png && (png = INGAME_$PNG.FLASH_PNG()),
                 0 == t && (t = 2 * e.xScale),
                 0 == n && (n = 2 * e.yScale);
                 var a, o = GameObject.AddGameObject();
-                if (o.Init(INGAME_$PNG.FLASH_PNG()),
+                if (o.Init(png),
                 o.holder = e,
                 o.localCoords = !0,
                 null != o.local_loc ? o.local_loc.x = o.local_loc.y = 0 : o.local_loc = new openfl_geom_Point(0,0),
@@ -22016,7 +22027,7 @@ var $lime_init = function($hx_exports, $global) {
                     }
                 },
                 ScoreEvent2: function() {
-                    let ret = eventBus.fire("sideout", { guy: this.lastSideScored, game: MainGame.thisMG, main: Main }).guy || this.lastSideScored;
+                    let ret = eventBus.fire("sideout", { guy: this.lastSideScored }).guy || this.lastSideScored;
                     this.holder.SideOut(ret);
                 },
                 doAfterVideo: null,
@@ -22024,7 +22035,7 @@ var $lime_init = function($hx_exports, $global) {
                     this.doAfterVideo = !0
                 },
                 DoClock: function() {
-                    eventBus.fire("timer", { time: this.timeLeft, quarter: this.quarter, game: MainGame.thisMG, main: Main })
+                    eventBus.fire("timer", { time: this.timeLeft, quarter: this.quarter })
                     var e = this.holder
                       , i = this.holder.GetChildByType(Ball);
                     if (null != i && (i.mode == BallModes.IN_PLAY || i.mode == BallModes.POSESSED)) {
@@ -22076,7 +22087,7 @@ var $lime_init = function($hx_exports, $global) {
                                     var I = e.GetLeftGuy()
                                       , _ = e.GetRightGuy()
                                       , C = null;
-                                    let ret = eventBus.fire("endgame", { game: MainGame.thisMG, main: Main }).end ?? true;
+                                    let ret = eventBus.fire("endgame", {}).end ?? true;
                                     if (I.score > _.score && (C = I),
                                     _.score > I.score && (C = _),
                                     null != C && ret)
@@ -92532,6 +92543,7 @@ var $lime_init = function($hx_exports, $global) {
                 Rehup: function(e) {
                     table1.hide();
                     table2.hide();
+                    Util.init(Main, MainGame.thisMG, Misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides);
                     null == e && (e = !1);
                     var i = this;
                     null != this.playOnlineButton && (this.playOnlineButton.die = 1),
