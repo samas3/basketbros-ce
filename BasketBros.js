@@ -313,7 +313,7 @@ class CharacterFinder {
                             event.ret = {point: clock.quarter};
                         }
                     }
-                })
+                });
             }, "Dunk score = quarter number", "bro_33"],
             ["Lit Fatter", false, 7, 9, 5, 5, 8, 8, "Taller than Bio Bee. Unbeatable boxing opponent.", "Slower than \"Turr Toe\", may wander around a bit during the game.", 0, 7, () => {
                 eventBus.register("punch", (data) => {
@@ -506,7 +506,6 @@ class CharacterFinder {
                         var r = a.GetChildByNameRecursive("head_bone");
                         if (Math.abs(e.hand?.loc.x - r.loc.x) < s * 2 && null != i && i.guyPosessedBy == a && null != r && a.local_alp >= .95) {
                             event.ret = {success: true};
-                            if (!guy.vars.misses) guy.vars.misses = 0;
                             guy.vars.misses++;
 
                         }
@@ -516,6 +515,7 @@ class CharacterFinder {
                     let guy = data.guy;
                     let opponent = guy.GetOtherGuy();
                     if (opponent == null) return;
+                    if (!guy.vars.misses) guy.vars.misses = 0;
                     if (guy.charName == "Juicy Fisher") opponent.mMissRate = 20 * guy.vars.misses;
                 });
             }, "Has great punching ability. When punched, increases opponent's miss rate", "bro_13"],
@@ -537,7 +537,7 @@ class CharacterFinder {
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy;
                     if (!guy.vars.last_taunt) guy.vars.last_taunt = clock.ticks;
-                    if (guy.charName == "Blizzard Johnny" && guy.getCritical() < 75 && data.type == 0 && clock.ticks - guy.vars.last_taunt > 15) {
+                    if (guy.charName == "Blizzard Johnny" && guy.getCritical() < 75 && data.type == 0 && clock.ticks - guy.vars.last_taunt > 30) {
                         guy.mCritical++;
                         guy.vars.last_taunt = clock.ticks;
                     }
@@ -671,7 +671,7 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Enters overtime and gets critical at the end of game", "bro_27"], 
+            }, "Enters overtime and gets critical at the end of game", "bro_27"],
             ["Wire Tea", false, 6, 5, 8, 7, 4, 10, "Very reliable with great leadership, superb chemistry knowledge. Can always keep the class from an overheated situation. Great player when on defence.", "Stubborn, appearance with a color similar to Nigg Banana. Totally suppressed by his girlfriend.", 0, 7, () => {
                 eventBus.register("update", (data) => {
                     let guy = data.guy;
@@ -719,7 +719,7 @@ class CharacterFinder {
                 });
                 eventBus.register("sideout", (data, event) => { // -1=left 1=right
                     for (const guy of Util.getFromName("Lover Renboy")) {
-                        let score1 = guy.score, score2 = guy.GetOtherGuy()?.score, ball = guy.GetBall();
+                        let score1 = guy.score, score2 = guy.GetOtherGuy().score, ball = guy.GetBall();
                         if (score1 < score2) {
                             if (Util.getSide(guy) == 1) event.ret = {guy: -1};
                             else event.ret = {guy: 1};
@@ -960,14 +960,14 @@ class CharacterFinder {
                             event.ret = {point: 8 * clock.quarter};
                         }
                     }
-                })
+                });
             }, "Dunk score = 7 * quarter number", "bro_33"],
             ["Lit Fatter +", false, 7, 20, 5, 5, 8, 100, "", "", 0, 7, () => {
                 eventBus.register("punch", (data, event) => {
                     if (data.to.charName == "Lit Fatter +") {
                         event.ret = {success: false};
                     }
-                })
+                });
             }, "Super high with big fists, won't be knocked down, can dunk everywhere", "bro_23"],
             ["George Beauty +", true, 5, 6, 5, 5, 6, 7, "It's an 100% chance that you'll lose your temper when you get aced by him in volley-balloon, and in basketball the same.", "", 0, 6, () => {
                 eventBus.register("point", (data) => {
@@ -1216,7 +1216,7 @@ class CharacterFinder {
                     if (data.guy.charName == "Bio Bee +" && data.guy.score >= 15 && Util.game.mode._hx_name == "MODE_PLAYING") {
                         Util.game.InitPostGame(data.guy);
                     }
-                })
+                });
             }, "Gets more points while dunking, wins the game after getting a certain score", "bro_28"],
             ["Poo Tattoo +", false, 6, 5, 7, 20, 8, 3, "This one is as hard and tough as an overcooked Mcdonalds' hash brown.", "", 0, 20, () => {
                 eventBus.register("time_quarter", (data) => {
@@ -1355,7 +1355,7 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Becomes stronger each quarter, it's hard to put an end to the game", "bro_27"], 
+            }, "Becomes stronger each quarter, it's hard to put an end to the game", "bro_27"],
             ["Wire Tea +", false, 6, 5, 8, 7, 4, 10, "His girlfriend gave him his hoop, and he won't let anyone touch it.", "", 0, 7, () => {
                 eventBus.register("update", (data) => { // 转换视角！
                     let guy = data.guy, opponent = guy.GetOtherGuy(), ball = guy.GetBall();
@@ -1670,7 +1670,7 @@ eventBus.register("update", (data) => {
     if (Util.getSide(guy) == 2) {
         table1.update(guy);
         guys[1] = guy;
-    } 
+    }
     if (Util.getSide(guy) == 1) {
         table2.update(guy);
         guys[0] = guy;
@@ -19174,7 +19174,7 @@ var $lime_init = function($hx_exports, $global) {
                                                 MainGame.thisMG.panel.AddPopText("FROM THE PARKING LOT!")
                                             }
                                     }
-                                    eventBus.fire("point", { guy: a, game: this, misc: Misc, point: MainGame._shotPoints, critical: MainGame.critical });
+                                    eventBus.fire("point", { guy: a, point: MainGame._shotPoints, critical: MainGame.critical });
                                 }
                         }
                     }
