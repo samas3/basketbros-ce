@@ -11210,7 +11210,7 @@ var $lime_init = function($hx_exports, $global) {
                     this.isPhone();
                     this.stage.addEventListener("activate", $bind(this, this.onActivate)),
                     this.stage.addEventListener("deactivate", $bind(this, this.onActivate)),
-                    Main.multiTouchSupported = openfl_ui_Multitouch.get_supportsTouchEvents(),
+                    Main.multiTouchSupported = 0 && openfl_ui_Multitouch.get_supportsTouchEvents(),
                     Main.multiTouchSupported && (openfl_ui_Multitouch.inputMode = 2,
                     this.stage.addEventListener("touchBegin", $bind(this, this.onTouchBegin)),
                     this.stage.addEventListener("touchMove", $bind(this, this.onTouchMove)),
