@@ -1,6 +1,8 @@
 const out_ = (...x) => console.log(...x);
 out_('Code by Trey Youth')
 
+const DATA_VERSION = "2.0-pre3-2"; // 版本名-版本号
+
 setInterval(() => {
     window.ShowVideo = () => {
         Main.DoneVideoAd(true);
@@ -357,13 +359,13 @@ class CharacterFinder {
                     }
                 });
                 eventBus.register("update", (data) => {
-                    let guy = data.guy, other = guy.GetOtherGuy();
-                    if (other == null) return;
-                    let score1 = guy.score, score2 = other.score;
+                    let guy = data.guy, opponent = guy.GetOtherGuy();
+                    if (opponent == null) return;
+                    let score1 = guy.score, score2 = opponent.score;
                     if (guy.charName == "George Beauty") {
                         let total = score2 + score1;
                         guy.mCritical = total * 1.5;
-                        other.mMissRate = total * 1.5;
+                        opponent.mMissRate = total * 1.5;
                     }
                 });
             }, "Randomly loses stats at the beginning of each quarter, but gain critical and makes his opponent miss", "bro_9"],
@@ -404,8 +406,7 @@ class CharacterFinder {
             ["Wang Rank1", true, 6, 3, 4, 5, 10, 5, "Rank 1 position in academic scores, sometimes even followed by an AK achievement.", "Sleepy, turns red easily.", 0, 10, () => {
                 eventBus.register("start_quarter", (data) => {
                     for (const guy of Util.getFromName("Wang Rank1")) {
-                        if (guy.GetOtherGuy() == null) continue;
-                        let score1 = guy.score, score2 = guy.GetOtherGuy().score;
+                        let score1 = guy.score, score2 = guy.GetOtherGuy()?.score;
                         let diff = score2 - score1;
                         if (diff < 0) continue;
                         guy.mShooting += diff / 2;
@@ -422,10 +423,11 @@ class CharacterFinder {
                 });
             }, "Increases speed when knocked down", "bro_2"],
             ["Mac King", false, 3, 6, 3, 3, 3, 3, "Kinglike domination in online basketball", "Thinks about his girlfriend too much", 0, 7, () => {
-                eventBus.register("start_game", (data) => {
+                eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || Util.main.player.practiceMode) return;
                     for (const guy of Util.getFromName("Mac King")) {
                         let opponent = guy.GetOtherGuy();
+                        if (opponent == null) continue;
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice;
                         if (Util.isCPUGuy(guy)) choice = Math.floor(Math.random() * 5);
@@ -513,7 +515,7 @@ class CharacterFinder {
                 eventBus.register("update", (data) => {
                     let guy = data.guy;
                     let opponent = guy.GetOtherGuy();
-                    if (opponent != null) return;
+                    if (opponent == null) return;
                     if (guy.charName == "Juicy Fisher") opponent.mMissRate = 20 * guy.vars.misses;
                 });
             }, "Has great punching ability. When punched, increases opponent's miss rate", "bro_13"],
@@ -533,7 +535,12 @@ class CharacterFinder {
             }, "Inverts opponent's left and right movements", "bro_29"],
             ["Blizzard Johnny", false, 7, 4, 7, 4, 7, 3, "AI annihilator, amazing point scorer when not facing humans.", "Often fails to secure his phone from the teacher. Slays too much.", 0, 3, () => {
                 eventBus.register("taunt", (data) => {
-                    if (data.guy.charName == "Blizzard Johnny" && data.guy.getCritical() < 75) data.guy.mCritical++;
+                    let guy = data.guy;
+                    if (!guy.vars.last_taunt) guy.vars.last_taunt = clock.ticks;
+                    if (guy.charName == "Blizzard Johnny" && guy.getCritical() < 75 && data.type == 0 && clock.ticks - guy.vars.last_taunt > 15) {
+                        guy.mCritical++;
+                        guy.vars.last_taunt = clock.ticks;
+                    }
                 });
             }, "Increases critical when taunting", "bro_12"],
             ["Lil Du2ian", false, 6, 4, 7, 10, 2, 7, "Lightning speed with incredible skills on foot. Can do mostly everything his body allows, awfully adorable.", "Small, easy to get hurt. Needs to take care of himself when facing vicious peers, as his cuteness is too attrative.", 0, 9, () => {
@@ -564,7 +571,7 @@ class CharacterFinder {
                 });
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy;
-                    if (guy.charName == "Poo Tattoo" && guy.vars.transport) {
+                    if (guy.charName == "Poo Tattoo" && guy.vars.transport && data.type == 0) {
                         guy.vars.transport = false;
                         let ball = guy.GetBall();
                         Util.setPos(guy, ...Util.getPos(ball));
@@ -630,7 +637,8 @@ class CharacterFinder {
             ["Diddy Chacha", false, 5, 6, 7, 6, 5, 9, "Native American. Outstanding fishing skills, unbelievable geography knowledge. Seems to know everything. Will never get hungry, as long as there's peers with food nearby.", "His fishing rod may sometimes hit himself, creating comments like making blind people wear deaf aids. A fat rear can cause some issues.", 0, 6, () => {
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy, opponent = guy.GetOtherGuy();
-                    if (guy.charName == "Diddy Chacha") {
+                    if (opponent == null) return;
+                    if (guy.charName == "Diddy Chacha" && data.type == 0) {
                         Util.moveTowards(opponent, ...Util.getPos(guy), 0.2);
                     }
                 });
@@ -711,7 +719,7 @@ class CharacterFinder {
                 });
                 eventBus.register("sideout", (data, event) => { // -1=left 1=right
                     for (const guy of Util.getFromName("Lover Renboy")) {
-                        let score1 = guy.score, score2 = guy.GetOtherGuy().score, ball = guy.GetBall();
+                        let score1 = guy.score, score2 = guy.GetOtherGuy()?.score, ball = guy.GetBall();
                         if (score1 < score2) {
                             if (Util.getSide(guy) == 1) event.ret = {guy: -1};
                             else event.ret = {guy: 1};
@@ -742,7 +750,38 @@ class CharacterFinder {
                         guy.mResilience = choice || 0;
                     }
                 });
-            }, "", "bro_3"],
+                eventBus.register("taunt", (data) => {
+                    let guy = data.guy;
+                    if (guy.charName == "samas 3000") {
+                        if (!guy.vars.last_taunt) guy.vars.last_taunt = clock.ticks;
+                        if (clock.ticks - guy.vars.last_taunt <= 15) return;
+                        switch (data.type) {
+                            case 0:
+                                guy.onFire = true;
+                                break;
+                            case 1:
+                                guy.KnockDown(guy.GetOtherGuy());
+                                break;
+                            case 2:
+                                guy.ReleaseShot();
+                                break;
+                            case 3:
+                                Util.addScore(guy, 1);
+                                break;
+                            case 4:
+                                Util.addScore(guy, -1);
+                                break;
+                            case 5:
+                                Util.game.panel.timeLeft = 60;
+                                break;
+                            case 6:
+                                Util.game.panel.timeLeft = 0;
+                                break;
+                        }
+                        guy.vars.last_taunt = clock.ticks;
+                    }
+                });
+            }, "Custom stats, taunt0 = onFire, 1 = knockdown, 2 = shoot, 3 = addScore, 4 = minusScore, 5 = resetQuarter, 6 = nextQuarter", "bro_3"],
             ["Candy Queen", true, 10, 10, 10, 10, 10, 10, "Best person in the world :) Queenlike domination on Mac King.", "If I dare.", 0, 10, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || Util.main.player.practiceMode) return;
@@ -875,6 +914,11 @@ class CharacterFinder {
                         }
                     }
                 });
+                eventBus.register("update", (data) => {
+                    if (data.guy.charName == "Nigg Banana +" && clock.quarter >= 3) {
+                        data.guy.onFire = true;
+                    }
+                });
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Nigg Banana +")) {
                         switch (data.quarter) { // 依旧小巧思
@@ -903,12 +947,7 @@ class CharacterFinder {
                                 }
                                 if (data.quarter != 4) break;
                             case 3:
-                                if (data.time == 58) {
-                                    guy.onFire = true;
-                                } else if (data.time == 1) {
-                                    guy.onFire = false;
-                                }
-                                if (data.quarter != 4) break;
+                                break;
                         }
                     }
                 });
@@ -929,7 +968,7 @@ class CharacterFinder {
                         event.ret = {success: false};
                     }
                 })
-            }, "Super high with big fists, won't be knocked down", "bro_23"],
+            }, "Super high with big fists, won't be knocked down, can dunk everywhere", "bro_23"],
             ["George Beauty +", true, 5, 6, 5, 5, 6, 7, "It's an 100% chance that you'll lose your temper when you get aced by him in volley-balloon, and in basketball the same.", "", 0, 6, () => {
                 eventBus.register("point", (data) => {
                     let guy = data.guy, opponent = guy.GetOtherGuy();
@@ -1131,7 +1170,7 @@ class CharacterFinder {
                     if (guy.GetOtherGuy()?.charName == "Turr Toe +") guy.onFire = false;
                 });
                 eventBus.register("point", (data) => {
-                    if (data.guy.charName == "Turr Toe +" && data.point == 2) {
+                    if (data.guy.charName == "Turr Toe +" && data.guy.shotStreak % 2 == 0) {
                         data.guy.mCritical += 100;
                     }
                 });
@@ -1212,7 +1251,7 @@ class CharacterFinder {
                         guy.vars.paralyze = false;
                     }
                     for (const guy of guys) {
-                        if (guy.GetOtherGuy().charName == "Lab Bee +") {
+                        if (guy.GetOtherGuy()?.charName == "Lab Bee +") {
                             guy.vars.begin_pos = Util.getPos(guy);
                         }
                     }
@@ -1270,7 +1309,7 @@ class CharacterFinder {
                 });
                 eventBus.register("update", (data) => {
                     let guy = data.guy, opponent = guy.GetOtherGuy();
-                    if (opponent?.charName == "Jen Soor +" && opponent.vars.paralyze && guy.vars.begin_pos) {
+                    if (opponent?.charName == "Jen Soor +" && guy.vars.paralyze && guy.vars.begin_pos) {
                         Util.setPos(guy, ...guy.vars.begin_pos);
                     }
                 });
@@ -1348,8 +1387,8 @@ class CharacterFinder {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Lover Renboy +")) {
                         if (!guy.vars.timer) guy.vars.timer = 0;
-                        guy.vars.timer++;
                         let ball = guy.GetBall();
+                        if (ball.guyPosessedBy == guy.GetOtherGuy()) guy.vars.timer++;
                         if (guy.vars.timer == 3) {
                             ball.guyPosessedBy = guy;
                             ball.DoPosessed();
@@ -1612,6 +1651,7 @@ class Clock {
     constructor() {
         this.quarter = 0;
         this.seconds = 0;
+        this.ticks = 0;
     }
     get time() {
         return this.quarter * 60 + (60 - this.seconds);
@@ -1623,7 +1663,7 @@ const Chars = new CharacterFinder();
 const clock = new Clock();
 const table1 = new Table('right'); // 小巧思
 const table2 = new Table('left');
-Util.reset("2.0-pre2-1"); // 版本名-版本号
+Util.reset(DATA_VERSION);
 let guys = [null, null];
 eventBus.register("update", (data) => {
     let guy = data.guy;
@@ -1638,6 +1678,7 @@ eventBus.register("update", (data) => {
 });
 let lastTimer = 0;
 eventBus.register("timer", (data) => {
+    clock.ticks = Util.game.tickCounter;
     for (let i = 0; i < 60; i++) {
         if (data.time < lastTimer && data.time == i) {
             eventBus.fire("time_quarter", { time: i, quarter: data.quarter });
@@ -11122,6 +11163,7 @@ var $lime_init = function($hx_exports, $global) {
                 },
                 lastInnerHeight: null,
                 isPhone: function() {
+                    return false;
                     var e = $global.navigator.userAgent.toLowerCase();
                     return e.indexOf("iphone") >= 0 || (e.indexOf("ipad") >= 0 || e.indexOf("android") >= 0)
                 },
@@ -12767,7 +12809,7 @@ var $lime_init = function($hx_exports, $global) {
                         this.bones.PlayAnimation(this.GetJumpInAnim(), !1),
                         Misc.PlaySound(JUMP_$WAV.Get()), eventBus.fire("jump", { guy: this })) : Math.abs(this.xSpeed) > .3 && null != e && (e.mode != BallModes.HOVERING || Math.abs(this.xSpeed) > 2) && (this.mode = Modes.MODE_WALKING,
                         this.bones.PlayAnimation(this.GetWalkAnim(), !0, 300, this.walkAnimSpeed),
-                        this.SetupWalkSounds()) : (this.Celebrate(this.GetTauntMovement()), eventBus.fire("taunt", { guy: this }))
+                        this.SetupWalkSounds()) : (this.Celebrate(this.GetTauntMovement()), eventBus.fire("taunt", { guy: this, type: parseInt(this.GetTauntMovement().match(/\d+/)?.[0]) || 0 }))
                     }
                 },
                 SetupWalkSounds: function() {},
@@ -17024,7 +17066,7 @@ var $lime_init = function($hx_exports, $global) {
                 Celebrate: function(e) {
                     null == e && (e = this.celebrateAnimName),
                     this.bones.PlayAnimation(e, !1, 70),
-                    this.mode = Modes.MODE_CELEBRATING,
+                    // this.mode = Modes.MODE_CELEBRATING,
                     this.xSpeed = 0
                 },
                 PlayCelebrateSound: function() {},
@@ -92643,11 +92685,11 @@ var $lime_init = function($hx_exports, $global) {
                         i.StartSinglePlayer(true)
                     }, this.aGrouping),
                     s += Main.thisMain.isPhone() ? 55 : 40,
-                    e || (this.tournamentButton = titlescreen_TitleScreen.AddImageButton("Shooting Practice", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, -r, s, f, .7, 0, (function() {
-                        i.StartPractice(),
-                        SendEvent("event", "start_practice")
-                    }
-                    ), this.aGrouping)),
+                    // e || (this.tournamentButton = titlescreen_TitleScreen.AddImageButton("Shooting Practice", INGAME_$PNG.BU_SINGLEPLAYER_UP_PNG, INGAME_$PNG.BU_SINGLEPLAYER_HOVER_PNG, -r, s, f, .7, 0, (function() {
+                    //     i.StartPractice(),
+                    //     SendEvent("event", "start_practice")
+                    // }
+                    // ), this.aGrouping)),
                     s += Main.thisMain.isPhone() ? 45 : 40,
                     !e) {
                         this.privateGameText = new TextSprite(-r,s,"ONLINE VS FRIENDS",Main.CHAT_FONT);
