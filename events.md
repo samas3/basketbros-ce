@@ -4,7 +4,7 @@
 
 "update", { guy: Guy }
 
-"taunt", { guy: Guy, type: ? }
+"taunt", { guy: Guy, type: number }
 
 "jump", { guy: Guy }
 
