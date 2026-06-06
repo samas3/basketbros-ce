@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css", "util.js"],
+      "resources": ["BasketBros.js", "INGAMEPNG.png", "script.js", "style.css", "util.js", "custom.js"],
       "matches": ["https://basketbros.io/*"]
     }
   ]

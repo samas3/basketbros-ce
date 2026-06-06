@@ -131,7 +131,7 @@ class Util {
 
 class CharacterFinder {
     constructor() {
-        this.custom_chars = [
+        this.non_boss = [
             ["Zane Willow", false, 5, 7, 10, 8, 5, 4, "Quick, explosive, great touch around the basket. Incredible quickness and hops for his size.", "Needs to stay away from the buffet during the offseason.", 0, 5, () => {}, "", "bro_4"],
             ["Trey Youth", false, 9, 5, 6, 9, 9, 2, "Smart, crafty with great handles and unlimited range.", "Small, poor defender, bad hair. Whines to the refs a lot.", 0, 5, () => {}, "", "bro_2"],
             ["Luke Magic", false, 8, 8, 6, 6, 9, 4, "Strong and crafty, Luke gets whatever shot he wants.", "Shows up for training camp out of shape every year.", 0, 5, () => {}, "", "bro_1"],
@@ -812,8 +812,10 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Swaps stats and reinforces it with opponent at the beginning", "bro_29"],
-            // boss
+            }, "Swaps stats and reinforces it with opponent at the beginning", "bro_29"]
+        ];
+        this.non_boss = this.non_boss.concat(custom);
+        this.boss = [
             ["Jar Tougger +", false, 5, 7, 8, 7, 7, 8, "This is who Jar Tougger thinks he is.", "", 900, 6, () => {}, "Just super lucky", "bro_3"],
             ["CD Player +", false, 7, 6, 8, 9, 3, 9, "He didn't secure his pants today, the sight could be fatal", "", 0, 4, () => {
                 eventBus.register("jump", (data) => {
@@ -1403,10 +1405,9 @@ class CharacterFinder {
                 });
             }, "Very strong ball control, sticking the ball to his hands", "bro_20"]
         ];
-        
+
         this.chars = {};
-        this.non_boss = this.custom_chars.filter(x => !this.isBoss(x[0])); // test
-        this.boss = this.custom_chars.filter(x => this.isBoss(x[0]));
+        this.custom_chars = this.non_boss.concat(this.boss);
         this.registerChars();
 
         this.PER_PAGE = 33;
@@ -24393,7 +24394,7 @@ var $lime_init = function($hx_exports, $global) {
                             e = l++;
                             var a = -5 * t;
                             let idx = e + (this.page - 1) * 100;
-                            if (!Chars.idToName(idx) || Chars.isBoss(Chars.idToName(idx))) break;
+                            if (!Chars.idToName(idx) || Chars.isBoss(Chars.idToName(idx))) continue;
                             let xpos = a + ((e - 1) % 11) * t;
                             if (l > 12 && l < 24) xpos -= 40;
                             this.AddBallerHeadIcon(Guy.NumberToSkin(idx), xpos, i, 60, 100, !0, Math.floor(e / 3), null, null, "");
