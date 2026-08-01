@@ -491,7 +491,7 @@ class CharacterFinder {
                         guy.mDefense += parts[3];
                         guy.mHandles += parts[4];
                         if (guy.vars.target == 3) guy.mCritical += 10;
-                        if (guy.vars.target == 4) guy.mCritical += 40;
+                        if (guy.vars.target == 4) guy.mCritical += 60;
                         guy.vars.addPoint = false;
                     }
                 });
@@ -13312,7 +13312,7 @@ var $lime_init = function($hx_exports, $global) {
                         i.body.velocity.x = Math.round(r),
                         i.body.velocity.y = Math.round(I),
                         Misc.PlaySound(ORGANIC_$WHOOSH_$07_$WAV.Get());
-                        eventBus.fire("releaseshot", { guy: this, ball: i });
+                        eventBus.fire("releaseshot", { guy: this });
                     }
                 },
                 PlayShotSound: function() {

@@ -20,7 +20,7 @@ ret { point: number, critical: boolean }
 
 "block", { from: Guy, to: Guy }
 
-"releaseshot", { guy: Guy, ball: Ball }
+"releaseshot", { guy: Guy }
 
 "jump", { guy: Guy }
 
