@@ -1,7 +1,7 @@
 const out_ = (...x) => console.log(...x);
 out_('Code by Trey Youth')
 
-const DATA_VERSION = "2.0-pre3-2"; // 版本名-版本号
+const DATA_VERSION = "3.0-3"; // 版本名-版本号
 
 setInterval(() => {
     window.ShowVideo = () => {
@@ -42,12 +42,15 @@ class EventBus {
 
 class Util {
     constructor() {
+        this.isPaused = false;
+        this.guys = [null, null];
+        this.cmdKey = false;
     }
-    static init(main, maingame, misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides) {
+    static init(Main, MainGame, Misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides) {
         out_('Util init');
-        this.main = main;
-        this.game = maingame;
-        this.misc = misc;
+        this.main = Main;
+        this.game = MainGame;
+        this.misc = Misc;
         this.BundlerData = BundlerData;
         this.INGAME_$PNG = INGAME_$PNG;
         this.openfl_geom_Rectangle = openfl_geom_Rectangle;
@@ -63,19 +66,26 @@ class Util {
         else return 1;
     }
     static getFromName(name) {
-        // if (guys[0] == null || guys[1] == null) return [];
+        // if (Util.guys[0] == null || Util.guys[1] == null) return [];
         let res = [];
         if (!this.main) return res;
-        if (this.main.player.firstGuyClassName == name) res.push(guys[1]);
-        if (this.main.player.secondGuyClassName == name) res.push(guys[0]);
+        if (this.main.player.firstGuyClassName == name) res.push(Util.getRight());
+        if (this.main.player.secondGuyClassName == name) res.push(Util.getLeft());
         return res;
     }
     static addScore(guy, score) {
+        if (score == 0) return;
         let panel = this.game.panel;
         guy.score += score;
-        if (this.getSide(guy) == 2) panel.lastSideScored = -1;
-        else panel.lastSideScored = 1;
-        panel.ScoreEvent(score);
+        for (var e = 0; e < 3; ) {
+            var i = e++;
+            if ((this.getSide(guy) == 1 && i == 0) || (this.getSide(guy) == 2 && i == 2)) {
+                var t = "" + (parseInt(this.game.panel.scores[i].text) + score);
+                1 == t.length && (t = "0" + t),
+                this.game.panel.scores[i].SetText(t),
+                this.misc.AddFlash(this.game.panel.scores[i])
+            }
+        }
     }
     static getTexture(x, y, w, h) {
         this.BundlerData.rect = new (this.openfl_geom_Rectangle)(x, y, w, h);
@@ -83,11 +93,8 @@ class Util {
     }
     static criticalBase(guy) {
         let rate = guy.getCritical();
-        if (rate < 0) return 0;
+        if (rate < 0) return -1;
         return Math.floor(rate / 100) + (Math.random() < (rate % 100) / 100 ? 1 : 0);
-    }
-    static isMissed(guy) {
-        return Math.random() < -guy.getCritical() / 100;
     }
     static isCPUGuy(guy) {
         return !this.main.player.twoPlayerMode && this.getSide(guy) == 1;
@@ -97,6 +104,7 @@ class Util {
         // goal: y=-60, x=+-628
         obj.local_loc.x = x;
         obj.local_loc.y = y;
+        obj.xSpeed = obj.ySpeed = 0;
     }
     static getPos(obj) {
         return [obj.local_loc.x, obj.local_loc.y];
@@ -125,6 +133,35 @@ class Util {
             Util.LS_set("boss_wins", 0);
             Util.LS_set("boss_loses", 0);
             Util.LS_set("boss_defeated", "[]");
+        }
+    }
+    static getLeft() {
+        return this.guys[0];
+    }
+    static getRight() {
+        return this.guys[1];
+    }
+}
+Util.guys = [null, null];
+
+class CommandParser {
+    constructor(str) {
+        this.str = str;
+    }
+    parse() {
+        let list = this.str.trim().split(" ");
+        switch (list[0]) {
+            case "score":
+                if (list.length != 3) return null;
+                if (list[1] != "1" && list[1] != "2") return null;
+                return ["score", parseInt(list[1]), parseInt(list[2])];
+            case "gravity":
+                return ["gravity"];
+            case "tp":
+                if (list.length != 3) return null;
+                return ["tp", parseFloat(list[1]), parseFloat(list[2])];
+            case "freeze":
+                return ["freeze"];
         }
     }
 }
@@ -735,26 +772,24 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("samas 3000")) {
                         let side = Util.getSide(guy) == 1 ? "LEFT" : "RIGHT";
                         let choice = parseInt(prompt(`(Side ${side}) Input Shooting`));
-                        guy.mShooting = choice || 0;
+                        guy.mShooting = choice || 18;
                         choice = parseInt(prompt(`(Side ${side}) Input Hops`));
-                        guy.mHops = choice || 0;
+                        guy.mHops = choice || 10;
                         choice = parseInt(prompt(`(Side ${side}) Input Speed`));
-                        guy.mSpeed = choice || 0;
+                        guy.mSpeed = choice || 12;
                         choice = parseInt(prompt(`(Side ${side}) Input Defense`));
-                        guy.mDefense = choice || 0;
+                        guy.mDefense = choice || 10;
                         choice = parseInt(prompt(`(Side ${side}) Input Handles`));
-                        guy.mHandles = choice || 0;
+                        guy.mHandles = choice || 10;
                         choice = parseInt(prompt(`(Side ${side}) Input Critical`));
                         guy.mCritical = choice || 0;
                         choice = parseInt(prompt(`(Side ${side}) Input Resilience`));
-                        guy.mResilience = choice || 0;
+                        guy.mResilience = choice || 5;
                     }
                 });
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy;
                     if (guy.charName == "samas 3000") {
-                        if (!guy.vars.last_taunt) guy.vars.last_taunt = clock.ticks;
-                        if (clock.ticks - guy.vars.last_taunt <= 15) return;
                         switch (data.type) {
                             case 0:
                                 guy.onFire = true;
@@ -766,22 +801,15 @@ class CharacterFinder {
                                 guy.ReleaseShot();
                                 break;
                             case 3:
-                                Util.addScore(guy, 1);
-                                break;
-                            case 4:
-                                Util.addScore(guy, -1);
-                                break;
-                            case 5:
                                 Util.game.panel.timeLeft = 60;
                                 break;
-                            case 6:
+                            case 4:
                                 Util.game.panel.timeLeft = 0;
                                 break;
                         }
-                        guy.vars.last_taunt = clock.ticks;
                     }
                 });
-            }, "Custom stats, taunt0 = onFire, 1 = knockdown, 2 = shoot, 3 = addScore, 4 = minusScore, 5 = resetQuarter, 6 = nextQuarter", "bro_3"],
+            }, "Custom stats, taunt0 = onFire, 1 = knockdown, 2 = shoot, 3 = resetQuarter, 4 = nextQuarter, / = open console", "bro_3"],
             ["Candy Queen", true, 10, 10, 10, 10, 10, 10, "Best person in the world :) Queenlike domination on Mac King.", "If I dare.", 0, 10, () => {
                 eventBus.register("start_quarter", (data) => {
                     if (data.quarter != 1 || Util.main.player.practiceMode) return;
@@ -1252,7 +1280,7 @@ class CharacterFinder {
                     for (const guy of Util.getFromName("Lab Bee +")) {
                         guy.vars.paralyze = false;
                     }
-                    for (const guy of guys) {
+                    for (const guy of Util.guys) {
                         if (guy.GetOtherGuy()?.charName == "Lab Bee +") {
                             guy.vars.begin_pos = Util.getPos(guy);
                         }
@@ -1299,7 +1327,7 @@ class CharacterFinder {
             }, "Makes opponent move towards him and knockdown every few seconds", "bro_4"],
             ["Jen Soor +", false, 4, 8, 2, 3, 5, 100, "Warning, this AI app may contain computer virus, talk to it and risk suffering system malfunction.", "", 50, 3, () => {
                 eventBus.register("start_quarter", (data) => {
-                    for (const guy of guys) {
+                    for (const guy of Util.guys) {
                         if (guy.GetOtherGuy().charName == "Jen Soor +") guy.vars.paralyze = false;
                     }
                 });
@@ -1316,7 +1344,7 @@ class CharacterFinder {
                     }
                 });
             }, "If punched opponent, paralyzes opponent in this quarter", "bro_17"],
-            ["Sobby Spur +", false, 7, 8, 7, 6, 9, 3, "", "The Totenham Hotspurs has just won the UEFA championships, and he's too excited for self-control now.", 0, 2, () => {
+            ["Sobby Spur +", false, 7, 8, 7, 6, 9, 3, "The Totenham Hotspurs has just won the UEFA championships, and he's too excited for self-control now.", "", 0, 2, () => {
                 eventBus.register("time_quarter", (data) => {
                     for (const guy of Util.getFromName("Sobby Spur +")) {
                         if (!guy.vars.timer) guy.vars.timer = 0;
@@ -1403,8 +1431,257 @@ class CharacterFinder {
                         }
                     }
                 });
-            }, "Very strong ball control, sticking the ball to his hands", "bro_20"]
+            }, "Very strong ball control, sticking the ball to his hands", "bro_20"],
+            ["Her No.4", true, 0, 15, 0, 0, 0, 0, "To avenge every single boss you've defeated, she may not fly after a double-jump like the one in MC, but she'll probably make you cry.", "", 0, 0, () => {
+                eventBus.register("start_quarter", (data) => {
+                    if (Util.getFromName("Her No.4").length > 0) {
+                        let guy = Util.getFromName("Her No.4")[0];
+                        guy.vars.update = true;
+                        if (!guy.vars.shown_text) {
+                            if (data.quarter == 1) {
+                                guy.vars.phase = 1;
+                                guy.vars.total_damage = 0;
+                            }
+                            switch (guy.vars.phase) {
+                                case 1:
+                                    Util.game.panel.AddPopText("PHASE 1 THE APEX");
+                                    guy.vars.hp = 80;
+                                    guy.mShooting = 9;
+                                    guy.mHops = 8;
+                                    guy.mSpeed = 8;
+                                    guy.mHandles = 8;
+                                    guy.mDefense = 10;
+                                    guy.mResilience = 15;
+                                    guy.GetOtherGuy().vars.hp = 50;
+                                    break;
+                                case 2:
+                                    Util.game.panel.AddPopText("PHASE 2 THE RAZOR");
+                                    guy.vars.hp = 30;
+                                    guy.mShooting = 10;
+                                    guy.mHops = 5;
+                                    guy.mSpeed = 30;
+                                    guy.mHandles = 10;
+                                    guy.mDefense = 10;
+                                    guy.mResilience = 10;
+                                    break;
+                                case 3:
+                                    Util.game.panel.AddPopText("PHASE 3 THE CELESTIAL");
+                                    guy.vars.hp = 30;
+                                    guy.vars.mCritical = 0;
+                                    break;
+                                case 4:
+                                    Util.game.panel.AddPopText("PHASE 4 THE RECKONING");
+                                    guy.mShooting = 9;
+                                    guy.mHops = 8;
+                                    guy.mSpeed = 8;
+                                    guy.mHandles = 8;
+                                    guy.mDefense = 10;
+                                    guy.mResilience = 15;
+                                    Util.setPos(guy, 0, -200);
+                                    guy.bones.PlayAnimation("dunk2", !1, 100)
+                                    guy.vars.hp = clock.quarter;
+                                    break;
+                            }
+                            guy.vars.shown_text = true;
+                        }
+                    }
+                });
+                eventBus.register("time_quarter", (data) => {
+                    for (const guy of Util.getFromName("Her No.4")) {
+                        let other = guy.GetOtherGuy();
+                        if (!guy.vars.hp || !other.vars.hp) return;
+                        if (other.vars.spine) {
+                            if (Math.random() < 1 / 3) other.vars.inverted = !other.vars.inverted;
+                        }
+                    }
+                });
+                eventBus.register("jump", (data) => {
+                    let guy = data.guy;
+                    if (guy.charName == "Her No.4") {
+                        guy.vars.jumped = true;
+                        guy.vars.last_jump = clock.ticks;
+                    }
+                });
+                eventBus.register("taunt", (data) => {
+                    let guy = data.guy, other = guy.GetOtherGuy();
+                    if (other.charName == "Her No.4") {
+                        if (other.vars.phase == 4) {
+                            other.KnockDown(guy);
+                        }
+                        if (!guy.vars.taunt_cnt) guy.vars.taunt_cnt = 0;
+                        if (guy.vars.last_taunt && clock.ticks - guy.vars.last_taunt > 20) {
+                            guy.vars.taunt_cnt++;
+                            if (guy.vars.taunt_cnt % 5 == 0) {
+                                guy.vars.hp++;
+                            }
+                        }
+                        guy.vars.last_taunt = clock.ticks;
+                    }
+                });
+                eventBus.register("point", (data) => {
+                    if (Util.getFromName("Her No.4").length > 0) {
+                        data.guy.vars.total_damage += data.point * (data.guy.criticalBase + 1);
+                        data.guy.GetOtherGuy().vars.hp -= data.point * (data.guy.criticalBase + 1);
+                    }
+                });
+                eventBus.register("update", (data) => {
+                    let guy = data.guy, other = guy.GetOtherGuy();
+                    if (other == null) return;
+                    if (guy.charName == "Her No.4") {
+                        if (guy.vars.hp != undefined) {
+                            guy.vars.hp = Math.max(0, guy.vars.hp);
+                            other.vars.hp = Math.max(0, other.vars.hp);
+                            Util.addScore(guy, guy.vars.hp - guy.score);
+                            Util.addScore(other, other.vars.hp - other.score);
+                            if (!guy.vars.update) {
+                                other.KnockDown(guy, 100);
+                                return;
+                            }
+                            if (guy.vars.hp <= 0) {
+                                guy.vars.phase++;
+                                guy.vars.update = false;
+                                guy.vars.shown_text = false;
+                                if (guy.vars.phase == 5) {
+                                    Util.game.InitPostGame(other);
+                                    guy.vars.update = false;
+                                    return;
+                                }
+                            }
+                            if (other.vars.hp <= 0) {
+                                Util.game.InitPostGame(guy);
+                                guy.vars.update = false;
+                                return;
+                            }
+                        }
+                        switch (guy.vars.phase) {
+                            case 1:
+                                if (guy.vars.jumped && clock.ticks - guy.vars.last_jump > 20) {
+                                    if (Util.getPos(guy)[1] >= 300) {
+                                        if (Util.getPos(other)[1] >= 300) guy.KnockDown(other, 10000);
+                                        guy.vars.jumped = false;
+                                    }
+                                }
+                                if (!guy.vars.last_skill) {
+                                    guy.vars.last_skill = clock.ticks;
+                                    guy.vars.skill_cd = Math.random() * (30 - 20) + 20;
+                                    guy.vars.last_skill_id = 2;
+                                }
+                                if (guy.vars.last_jamal) {
+                                    if (clock.ticks - guy.vars.last_jamal < 3 * 30) {
+                                        let e = data.guy, a = e.GetOtherGuy(), i = e.GetBall();
+                                        var o = a, s = 50 + 2 * e.mDefense - 2 * o.mHandles;
+                                        var r = a.GetChildByNameRecursive("head_bone");
+                                        if (Math.abs(e.hand?.loc.x - r.loc.x) < s && null != i && null != r && a.local_alp >= .95) {
+                                            let net1 = Util.game.net1, net2 = Util.game.net2;
+                                            e.KnockDown(a);
+                                            if (Util.getSide(e) == 1) {
+                                                Util.moveTowards(a, net2.local_loc.x, a.local_loc.y, 0.3);
+                                            } else {
+                                                Util.moveTowards(a, net1.local_loc.x, a.local_loc.y, 0.3);
+                                            }
+                                        }
+                                    } else if (guy.vars.decrease) {
+                                        guy.mSpeed -= 100;
+                                        guy.vars.decrease = false;
+                                    }
+
+                                }
+                                break;
+                            case 2:
+                                guy.onFire = true;
+                                guy.mCritical = 3000 / guy.vars.hp;
+                                break;
+                            case 3:
+                                Util.setPos(guy, 0, -200);
+                                if (guy.vars.pull) {
+                                    Util.moveTowards(other, 0, 304, 0.05);
+                                }
+                                if (clock.ticks - guy.vars.last_pull > 5 * 30) {
+                                    guy.vars.pull = false;
+                                }
+                                break;
+                        }
+                        if (clock.ticks - guy.vars.last_skill > guy.vars.skill_cd * 30) {
+                            guy.vars.last_skill = clock.ticks;
+                            switch (guy.vars.phase) {
+                                case 1:
+                                    if (guy.vars.last_skill_id == 2) {
+                                        guy.mShooting += 2;
+                                        guy.mHops += 2;
+                                        guy.mSpeed += 2;
+                                        guy.mHandles += 2;
+                                        guy.mDefense += 2;
+                                        guy.mCritical += 100;
+                                        guy.mResilience += 2;
+                                        guy.vars.last_skill_id = 1;
+                                    } else {
+                                        guy.vars.last_jamal = clock.ticks;
+                                        guy.mSpeed += 100;
+                                        guy.vars.decrease = true;
+                                        guy.vars.last_skill_id = 2;
+                                    }
+                                    guy.vars.skill_cd = Math.random() * (30 - 20) + 20;
+                                    break;
+                                case 3:
+                                    let rand = Math.random();
+                                    if (rand < 1 / 3) {
+                                        guy.Celebrate("taunt_teabag");
+                                        guy.ReleaseShot();
+                                        guy.ReleaseShot();
+                                    } else if (rand < 2 / 3) {
+                                        guy.Celebrate("taunt_2_hipthrust");
+                                        guy.vars.pull = true;
+                                        guy.vars.last_pull = clock.ticks;
+                                    } else {
+                                        guy.bones.PlayAnimation("punch", !1, 0, 3.5);
+                                        guy.KnockDown(other);
+                                        if (!guy.vars.cnt) guy.vars.cnt = 0;
+                                        guy.vars.cnt++;
+                                        let debuff = [() => {other.mHops -= 15; other.mSpeed -= 15;}, () => {other.mShooting -= 20;}, () => {other.mCritical -= 60;}, () => {other.vars.spine = true;}]
+                                        let chosen = [];
+                                        let choice = () => {
+                                            let id = Math.floor(Math.random() * 4);
+                                            chosen.push(id);
+                                            return debuff.pop(id);
+                                        }
+                                        for (let i = 0; i < guy.vars.cnt; i++) {
+                                            choice();
+                                        }
+                                        guy.vars.last_debuff = clock.ticks;
+                                        guy.vars.debuffs = chosen;
+                                        guy.vars.buffed = true;
+                                    }
+                                    guy.vars.skill_cd = Math.random() * (15 - 12) + 12;
+                                    break;
+                                case 4:
+                                    Util.setPos(guy, 0, -200);
+                                    guy.bones.PlayAnimation("punch", !1, 0, 3.5);
+                                    guy.KnockDown(other);
+                                    other.hp -= 5;
+                                    guy.vars.total_damage += 5;
+                                    guy.vars.skill_cd = Math.random() * (50 - 40) + 40;
+                                    break;
+                            }
+                        }
+                    }
+                    if (other.charName == "Her No.4") {
+                        if (other.vars.last_debuff && clock.ticks - other.vars.last_debuff > 20 * 30 && other.vars.buffed) {
+                            let buff = [() => {guy.mHops += 15; guy.mSpeed += 15;}, () => {guy.mShooting += 20;}, () => {guy.mCritical += 60;}, () => {guy.vars.spine = false; guy.vars.inverted = false;}]
+                            for (let i of other.vars.debuffs) {
+                                buff[i]();
+                            }
+                            other.vars.buffed = false;
+                        }
+                    }
+                })
+                eventBus.register("endgame", (data, event) => {
+                    if (Util.getFromName("Her No.4").length > 0) {
+                        event.ret = {end: false};
+                    }
+                });
+            }, "I strongly recommend trying it out yourself, even I can't recall every ability without some help.", "bro_24"]
         ];
+        this.boss_list = this.boss.reduce((l, x) => l.concat(x[0]), []);
 
         this.chars = {};
         this.custom_chars = this.non_boss.concat(this.boss);
@@ -1414,7 +1691,7 @@ class CharacterFinder {
     }
     maxPages(isBoss) {
         if (!isBoss) return (this.non_boss.length % this.PER_PAGE == 0 ? this.non_boss.length / this.PER_PAGE : Math.floor(this.non_boss.length / this.PER_PAGE) + 1);
-        else return 1; // boss num = 33
+        else return 2; // boss num = 33 + 1
     }
     registerPerk(Perk) {
         let player_perks = [];
@@ -1474,10 +1751,13 @@ class CharacterFinder {
         return Math.floor(id / 33) * 100 + (id % 33) + 1;
     }
     isBoss(name) {
-        return name.includes('+');
+        return this.boss_list.includes(name);
+    }
+    isMega(name) {
+        return this.boss_list.indexOf(name) > 32;
     }
     getAvatar(name) {
-        if (this.isBoss(name)) name = name.substr(0, name.length - 2);
+        if (name.includes("+")) name = name.substr(0, name.length - 2);
         switch (name) {
             case "Flee Lane":
                 return [0, 1456, 121, 105];
@@ -1547,6 +1827,8 @@ class CharacterFinder {
                 return [1900, 1900, 100, 100];
             case "Candy Queen":
                 return [1623, 1477, 176, 162];
+            case "Her No.4":
+                return [763, 1736, 64, 64];
         }
     }
     getBossTable() {
@@ -1595,7 +1877,7 @@ class Table {
         row.insertCell(0).textContent = propName;
         switch (typeof propValue) {
             case "number":
-                row.insertCell(1).textContent = Math.round(100 * propValue) / 100;
+                row.insertCell(1).textContent = Util.misc.Round(propValue, 2);
                 break;
             case "boolean":
                 row.insertCell(1).textContent = propValue + "";
@@ -1665,16 +1947,47 @@ const clock = new Clock();
 const table1 = new Table('right'); // 小巧思
 const table2 = new Table('left');
 Util.reset(DATA_VERSION);
-let guys = [null, null];
+document.addEventListener("keyup", (event) => {
+    if (event.key == "/") {
+        Util.cmdKey = true;
+    }
+});
 eventBus.register("update", (data) => {
     let guy = data.guy;
     if (Util.getSide(guy) == 2) {
         table1.update(guy);
-        guys[1] = guy;
+        Util.guys[1] = guy;
     }
     if (Util.getSide(guy) == 1) {
         table2.update(guy);
-        guys[0] = guy;
+        Util.guys[0] = guy;
+    }
+    for (const guy of Util.getFromName("samas 3000")) {
+        if (Util.cmdKey) {
+            Util.cmdKey = false;
+            let command = prompt("Input command");
+            let parse = new CommandParser(command).parse();
+            if (parse == null) {
+                alert("Invalid command");
+                break;
+            }
+            switch (parse[0]) {
+                case "score":
+                    if (parse[1] == 1) Util.addScore(Util.getLeft(), parse[2]);
+                    else Util.addScore(Util.getRight(), parse[2]);
+                    break;
+                case "gravity":
+                    if (guy.gravity > 0) guy.gravity = 0;
+                    else guy.gravity = 0.95;
+                    break;
+                case "tp":
+                    Util.setPos(guy, parse[1], parse[2]);
+                    break;
+                case "freeze":
+                    Util.isPaused = !Util.isPaused;
+                    break;
+            }
+        }
     }
 });
 let lastTimer = 0;
@@ -1690,7 +2003,7 @@ eventBus.register("timer", (data) => {
     lastTimer = data.time;
 });
 eventBus.register("point", (data) => {
-    if (data.critical > 0) {
+    if (data.guy.criticalBase > 0) {
         let i = 0;
         let interval = setInterval(() => {
             Util.misc.AddFlash(data.guy.GetBall(), 0, 2, 2);
@@ -1698,15 +2011,22 @@ eventBus.register("point", (data) => {
             if (i > 10) clearInterval(interval);
         }, 10);
     }
+    for (const guy of Util.guys) {
+        guy.criticalBase = Util.criticalBase(guy);
+    }
 });
 eventBus.register("time_quarter", (data) => {
     if (data.time == 59) { // hook time
         eventBus.fire("start_quarter", { quarter: data.quarter });
-        if (data.quarter == 1) Util.game._shotPoints = 3;
+        if (data.quarter == 1) {
+            for (const guy of Util.guys) {
+                guy.criticalBase = Util.criticalBase(guy);
+            }
+        }
     }
 });
 eventBus.register("post_game", (data) => {
-    let [ guy1, guy2 ] = guys;
+    let guy1 = Util.getLeft(), guy2 = Util.getRight();
     if (!Chars.isBoss(guy1.charName)) return;
     let wins = parseInt(Util.LS_get("boss_wins"));
     let loses = parseInt(Util.LS_get("boss_loses"))
@@ -8974,6 +9294,11 @@ var $lime_init = function($hx_exports, $global) {
                 INGAME_$PNG.Get()
             }
             ,
+            INGAME_$PNG.CUSTOM_FONT = function() {
+                return BundlerData.rect = new openfl_geom_Rectangle(1090,1887,736,69),
+                INGAME_$PNG.Get()
+            }
+            ,
             INGAME_$PNG.CHAT_PNG = function() {
                 return BundlerData.rect = new openfl_geom_Rectangle(1111,482,512,174),
                 INGAME_$PNG.Get()
@@ -10555,7 +10880,12 @@ var $lime_init = function($hx_exports, $global) {
                 e = Xml.parse(Misc.StringResource("ubuntu_font")),
                 i = bitmapfont_XMLBitmapFontLoader.create(e);
                 n = INGAME_$PNG.UBUNTU_REG_PNG();
-                Main.UBUNTU_FONT = new bitmapfont_FlashBitmapFontInst(i,n,BundlerData.GetRect())
+                Main.UBUNTU_FONT = new bitmapfont_FlashBitmapFontInst(i,n,BundlerData.GetRect());
+                
+                e = Xml.parse(Misc.StringResource("custom_font")),
+                i = bitmapfont_XMLBitmapFontLoader.create(e);
+                n = INGAME_$PNG.CUSTOM_FONT();
+                Main.CUSTOM_FONT = new bitmapfont_FlashBitmapFontInst(i,n,BundlerData.GetRect())
             }
             ,
             Main.AddLayers = function() {
@@ -10573,7 +10903,7 @@ var $lime_init = function($hx_exports, $global) {
                 Main.ResetTiming(),
                 Main.thisMain.HideSideBanners(),
                 Main.children.push(new MainGame(e)); // hook enter game
-                eventBus.fire("start_game", {});
+                Util.isPaused = false;
                 table1.show();
                 if (!Main.player.practiceMode) table2.show();
                 Util.init(Main, MainGame.thisMG, Misc, BundlerData, INGAME_$PNG, openfl_geom_Rectangle, HxOverrides);
@@ -12093,6 +12423,7 @@ var $lime_init = function($hx_exports, $global) {
                     }
                 },
                 update: function() {
+                    if (Util.isPaused) return;
                     this.set_local_xScale(.75),
                     this.set_local_yScale((.75 + 4 * this.local_yScale) / 5);
                     var e = GameObject.prototype.update.call(this);
@@ -12129,6 +12460,7 @@ var $lime_init = function($hx_exports, $global) {
                 this.fgMade = 0,
                 this.fgAttempts = 0,
                 this.shotStreak = 0,
+                this.criticalBase = 0,
                 this.perks = Player.perks,
                 this.fireLayer = new GameObject,
                 e.children.push(this.fireLayer),
@@ -12708,6 +13040,7 @@ var $lime_init = function($hx_exports, $global) {
                 },
                 lastX: null,
                 update: function() {
+                    if (Util.isPaused && this.charName != "samas 3000") return;
                     eventBus.fire("update", { guy: this });
                     this.topSpeed = 7.3 + this.mSpeed / 10;
                     this.jumpSpeed = 14 + .9 * this.mHops;
@@ -13069,8 +13402,8 @@ var $lime_init = function($hx_exports, $global) {
                         !1;
                     var e = this.GetBall()
                       , i = this.GetOtherGuy();
-                    if (null != i && this.ySpeed < 0 && Math.abs(this.ySpeed) < 5 && e.guyPosessedBy != this && (i.mode == Modes.MODE_DUNKING || e.isShot) && e.shotBy != this && "block" != this.bones.currentAnim && !e.IsAboveRim() && null != i && (i.mode == Modes.MODE_DUNKING || e.ySpeed < 0) && Misc.distance2(this.hand.loc.x, this.hand.loc.y, e.loc.x, e.loc.y) < 100 && MainGame.thisMG.mode == GameModes.MODE_PLAYING) {
-                        let ret = eventBus.fire("block", { from: i, to: o });
+                    if (null != i && (this.charName == "Her No.4" && this.vars.phase == 3 ? Misc.distance2(this.local_loc.x, this.local_loc.y, e.loc.x, e.loc.y) < 500 : (this.ySpeed < 0 && Math.abs(this.ySpeed) < 5 && "block" != this.bones.currentAnim && !e.IsAboveRim() && Misc.distance2(this.hand.loc.x, this.hand.loc.y, e.loc.x, e.loc.y) < 100)) && e.guyPosessedBy != this && (i.mode == Modes.MODE_DUNKING || e.isShot) && e.shotBy != this && (this.charName == "Her No.4" && this.vars.phase == 3 ? true : e.ySpeed < 0) && MainGame.thisMG.mode == GameModes.MODE_PLAYING) {
+                        let ret = eventBus.fire("block", { from: this, to: i }); // hook block
                         if (ret.success != false) {
                             this.bones.PlayAnimation("block", !1, 50, 1.5),
                             this.JustHitBall(),
@@ -13085,7 +13418,12 @@ var $lime_init = function($hx_exports, $global) {
                             e.mode = BallModes.IN_PLAY;
                             var t = this.bones.local_xScale;
                             e.body.velocity.x = 70 * (t > 0 ? 1 : t < 0 ? -1 : 0),
-                            e.grabCounter = 40
+                            e.grabCounter = 40;
+                            if (this.charName == "Her No.4" && this.vars.phase == 3) {
+                                e.body.velocity.x = 0,
+                                e.grabCounter = 0;
+                                this.ReleaseShot();
+                            }
                         }
                     }
                     var n = this.GetYMovement()
@@ -13110,13 +13448,9 @@ var $lime_init = function($hx_exports, $global) {
                             var n = this.side == Sides.SIDE_LEFT ? MainGame.rimX2 : MainGame.rimX1
                               , l = Math.abs(this.local_loc.x - n);
                             if (this.fgAttempts++,
-                            l < (this.charName == "Lit Fatter +" ? 4000 : 400) && this.mode != Modes.MODE_DUNKING) {
+                            l < (this.charName == "Lit Fatter +" || (this.charName == "Her No.4" && this.vars.phase == 3) ? 4000 : 400) && this.mode != Modes.MODE_DUNKING) {
                                 MainGame._shotPoints = 2;
-                                let critical = Util.criticalBase(this);
-                                let missed = Util.isMissed(this);
-                                MainGame.critical = critical;
-                                if (missed) MainGame._shotPoints = 0;
-                                let ret = eventBus.fire("shoot", { guy: this, critical: MainGame.critical, point: 2 });
+                                let ret = eventBus.fire("shoot", { guy: this, point: 2 });
                                 if (ret.point != null) MainGame._shotPoints = ret.point;
                                 this.bones.PlayAnimation(this.GetRandomDunk(), !1),
                                 this.mode = Modes.MODE_DUNKING,
@@ -13246,6 +13580,7 @@ var $lime_init = function($hx_exports, $global) {
                                                 e = "STUFFED!!!",
                                                 Misc.PlayVoiceSound(STUFFED_$WAV.Get())
                                             }
+                                            // MainGame.thisMG.panel.AddPopText("今天开始我要自己上厕所", Main.CUSTOM_FONT)
                                             MainGame.thisMG.panel.AddPopText(e)
                                         }
                                 }
@@ -13274,11 +13609,7 @@ var $lime_init = function($hx_exports, $global) {
                                     this.ySpeed -= 5,
                                     t.AddMovement(14, 0, 0, 100, !1, 0),
                                     t.AddEvent($bind(this, this.ReleaseShot), e);
-                                    let critical = Util.criticalBase(this);
-                                    let missed = Util.isMissed(this);
-                                    MainGame.critical = critical;
-                                    if (missed) MainGame._shotPoints = 0;
-                                    let ret = eventBus.fire("shoot", { guy: this, critical: MainGame.critical, point: 3 });
+                                    let ret = eventBus.fire("shoot", { guy: this, point: 3 });
                                     if (ret.point != null) MainGame._shotPoints = ret.point;
                                 }
                         }
@@ -17827,7 +18158,6 @@ var $lime_init = function($hx_exports, $global) {
                 this.leftChatBuffer = "",
                 this.wasOnlineGame = !1;
                 this._shotPoints = 0;
-                this.critical = false;
                 var i = this;
                 GameObject.call(this);
                 // this.SetOpponent(); hook个diao
@@ -19108,7 +19438,6 @@ var $lime_init = function($hx_exports, $global) {
                         t = e.local_loc.x;
                         MainGame.lastSideScored = t > 0 ? 1 : t < 0 ? -1 : 0,
                         e.isShot = !1,
-                        i && this.panel.PointScored(e),
                         e.shotBy = null,
                         this.CycleLights(2);
                         for (var n = 0, l = this.children; n < l.length; ) {
@@ -19116,12 +19445,15 @@ var $lime_init = function($hx_exports, $global) {
                             if (++n,
                             o instanceof Guy)
                                 if ((a = o).side == Sides.SIDE_RIGHT && e.local_loc.x < 0 || a.side == Sides.SIDE_LEFT && e.local_loc.x > 0) {
+                                    eventBus.fire("point", { guy: a, point: MainGame._shotPoints });
                                     a.mode != Modes.MODE_DUNKING && a.Celebrate(),
                                     Misc.PlaySound(CROWD_$ROAR_$WAV.Get()),
                                     !e.dunked && e.rimCount <= 1 && Misc.PlaySound(SWISH_$WAV.Get());
+                                      let score = MainGame.getShotPoints(a);
                                     var s = a.side == Sides.SIDE_RIGHT ? 2 : 0
-                                      , r = Std.parseInt(this.panel.scores[s].text) + MainGame.getShotPoints();
-                                    if (a.score += MainGame.getShotPoints(),
+                                      , r = Std.parseInt(this.panel.scores[s].text) + score;
+                                    if (Util.addScore(a, score),
+                                    i && this.panel.PointScored(a),
                                     MainGame.onlineGame) {
                                         var I = a.GetOtherGuy();
                                         if (null != I)
@@ -19175,7 +19507,6 @@ var $lime_init = function($hx_exports, $global) {
                                                 MainGame.thisMG.panel.AddPopText("FROM THE PARKING LOT!")
                                             }
                                     }
-                                    eventBus.fire("point", { guy: a, point: MainGame._shotPoints, critical: MainGame.critical });
                                 }
                         }
                     }
@@ -21814,12 +22145,11 @@ var $lime_init = function($hx_exports, $global) {
                             }
                         }
                     }
-                    this.ScoreEvent(MainGame.getShotPoints()),
                     this.AddMovement(14, 0, 0, 2e3),
                     this.AddEvent($bind(this, this.ScoreEvent2)),
                     null != t && this.AddPopText(t)
                 },
-                AddPopText: function(e) {
+                AddPopText: function(e, font=Main.CHAT_FONT) {
                     if (Main.player.practiceMode)
                         return null;
                     if (this.timeLeft < 5)
@@ -21830,7 +22160,7 @@ var $lime_init = function($hx_exports, $global) {
                         var i = e.split("|");
                         e = null != i[c = Rnd.integer(0, i.length)] ? i[c] : i[0]
                     }
-                    var t, n = new TextSprite(this.loc.x,this.loc.y + 250,e,Main.CHAT_FONT);
+                    var t, n = new TextSprite(this.loc.x,this.loc.y + 250,e,font);
                     n.SetText(e),
                     n.name = "poptext",
                     this.holder.children.push(n),
@@ -21917,7 +22247,7 @@ var $lime_init = function($hx_exports, $global) {
                     n.set_local_b(0)) : (n.r = 0,
                     n.g = 0,
                     n.b = 0);
-                    var l = new TextSprite(0,0,e,Main.CHAT_FONT);
+                    var l = new TextSprite(0,0,e,font); // custom
                     if (l.ignoreLocalColor = !0,
                     l.holder = n,
                     l.localCoords = !0,
@@ -22057,18 +22387,6 @@ var $lime_init = function($hx_exports, $global) {
                     MainGame.IsGameWinner(this.scores[2].text) ? i = -1 == ((o = e.local_loc.x) > 0 ? 1 : o < 0 ? -1 : 0) : i = !1;
                     return i ? "Game Winner!" : t == e.lastGuyHit ? "Nice Shot!" : null
                 },
-                ScoreEvent: function(score) {
-                    this.holder.GetChildByType(Ball);
-                    for (var e = 0; e < 3; ) {
-                        var i = e++;
-                        if (1 != i && i - 1 != this.lastSideScored) {
-                            var t = "" + (Std.parseInt(this.scores[i].text) + score);
-                            1 == t.length && (t = "0" + t),
-                            this.scores[i].SetText(t),
-                            Misc.AddFlash(this.scores[i])
-                        }
-                    }
-                },
                 ScoreEvent2: function() {
                     let ret = eventBus.fire("sideout", { guy: this.lastSideScored }).guy || this.lastSideScored;
                     this.holder.SideOut(ret);
@@ -22078,7 +22396,7 @@ var $lime_init = function($hx_exports, $global) {
                     this.doAfterVideo = !0
                 },
                 DoClock: function() {
-                    eventBus.fire("timer", { time: this.timeLeft, quarter: this.quarter })
+                    eventBus.fire("timer", { time: this.timeLeft, quarter: this.quarter });
                     var e = this.holder
                       , i = this.holder.GetChildByType(Ball);
                     if (null != i && (i.mode == BallModes.IN_PLAY || i.mode == BallModes.POSESSED)) {
@@ -22243,6 +22561,7 @@ var $lime_init = function($hx_exports, $global) {
                             n.die = 1
                 },
                 update: function() {
+                    if (Util.isPaused) return;
                     var e = GameObject.prototype.update.call(this);
                     if (this.DoClock(),
                     this.doAfterVideo && (this.doAfterVideo = !1,
@@ -24402,14 +24721,23 @@ var $lime_init = function($hx_exports, $global) {
                         }
                     } else {
                         for (; l < 34; ) {
-                            e = l++;
-                            var a = -5 * t;
-                            if (e > Chars.boss.length) break;
-                            let idx = Chars.nameToId(Chars.boss[e - 1][0]);
-                            let xpos = a + ((e - 1) % 11) * t;
-                            if (l > 12 && l < 24) xpos -= 40;
-                            this.AddBallerHeadIcon(Guy.NumberToSkin(idx), xpos, i, 60, 100, !0, Math.floor(e / 3), null, null, "");
-                            if (l == 12 || l == 23) i += n;
+                            if (this.page == 1) {
+                                e = l++;
+                                var a = -5 * t;
+                                if (e > Chars.boss.length) break;
+                                let idx = Chars.nameToId(Chars.boss[e - 1][0]);
+                                let xpos = a + ((e - 1) % 11) * t;
+                                if (l > 12 && l < 24) xpos -= 40;
+                                this.AddBallerHeadIcon(Guy.NumberToSkin(idx), xpos, i, 60, 100, !0, Math.floor(e / 3), null, null, "");
+                                if (l == 12 || l == 23) i += n;
+                            } else {
+                                e = 17;
+                                var a = -5 * t;
+                                let idx = Chars.nameToId(Chars.boss[33][0]);
+                                let xpos = a + ((e - 1) % 11) * t;
+                                this.AddBallerHeadIcon(Guy.NumberToSkin(idx), xpos, i + n, 60, 100, !0, Math.floor(e / 3), null, null, "");
+                                break;
+                            }
                         }
                     }
                     // hook page
@@ -24541,7 +24869,7 @@ var $lime_init = function($hx_exports, $global) {
                             g.loc.y = A + u * J * S + d * m * y
                         }
                     }
-                    g.set_local_xScale(g.set_local_yScale(Guy.IsFemale(e) ? .33 : .4)),
+                    g.set_local_xScale(g.set_local_yScale(Chars.isMega(e) ? 1 : (Guy.IsFemale(e) ? .33 : .4))),
                     g.local_loc.x = i,
                     g.local_loc.y = t - 400,
                     g.AddMovement(4, 0, 1, 200, !1, 500 + 100 * o),
@@ -25583,14 +25911,16 @@ var $lime_init = function($hx_exports, $global) {
                                 if (!t) return;
                                 if (that.AddStat(o, name, value, G)) G += 22;
                             }
-                            addStat("Shooting", Guy.GetShooting(n));
-                            addStat("Height", Guy.GetHeight(n));
-                            addStat("Hops", Guy.GetHops(n));
-                            addStat("Speed", Guy.GetSpeed(n));
-                            addStat("Handles", Guy.GetHandles(n));
-                            addStat("Defense", Guy.GetDefense(n));
-                            addStat("Critical", Guy.GetCritical(n));
-                            addStat("Resilience", Guy.GetResilience(n));
+                            if (!Chars.isMega(n)) {
+                                addStat("Shooting", Guy.GetShooting(n));
+                                addStat("Height", Guy.GetHeight(n));
+                                addStat("Hops", Guy.GetHops(n));
+                                addStat("Speed", Guy.GetSpeed(n));
+                                addStat("Handles", Guy.GetHandles(n));
+                                addStat("Defense", Guy.GetDefense(n));
+                                addStat("Critical", Guy.GetCritical(n));
+                                addStat("Resilience", Guy.GetResilience(n));
+                            }
                             this.guyInfoBox.AddMovement(4, 0, 1, 300)
                         } else this.guyInfoBox.set_local_alp(0)
                     } else f.SetText("Win games, unlock more bros!");
@@ -50492,13 +50822,20 @@ var $lime_init = function($hx_exports, $global) {
             });
             var menus_InGameMenu = function() {
                 var e = this;
+                let status = '';
+                for (const guy of Util.getFromName("samas 3000")) {
+                    let pos = Util.getPos(guy);
+                    status = `Pos: ${Util.misc.Round(pos[0], 2)}, ${Util.misc.Round(pos[1], 2)}`;
+                }
                 GameObject.call(this),
-                MainGame.onlineGame ? this.gdb = new GenericDialogBox("Quitting a game early will give\nyou 2 losses. Are you sure?",0,!1,!0,-50) : this.gdb = new GenericDialogBox("Really quit?",0,!1,!0,-30),
+                MainGame.onlineGame ? this.gdb = new GenericDialogBox("Quitting a game early will give\nyou 2 losses. Are you sure?",0,!1,!0,-50) : this.gdb = new GenericDialogBox(`Game Paused\n${status}`,0,!1,!0,-30),
                 this.children.push(this.gdb),
                 this.name = "ingame_menu",
                 this.AddButtons();
+                Util.isPaused = true;
                 var i = this.gdb.dialogBox.GetChildByType(TextButton);
                 null != i && (i.callbackFunction = function() {
+                    Util.isPaused = false;
                     e.die = 1,
                     e.gdb.die = 1
                 }
@@ -50767,6 +51104,7 @@ var $lime_init = function($hx_exports, $global) {
                 AddStats: function(e) {
                     var i = -this.dialogBox.ySize / 2 + 80
                       , t = .65,d = 0,u=0,J=null;
+                    let ismega = Chars.isMega(Util.getLeft().charName);
                     if (null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,"Your Record",Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -50922,7 +51260,14 @@ var $lime_init = function($hx_exports, $global) {
                     u.set_local_xScale(u.set_local_yScale(Main.thisMain.isPhone() ? t : .5)),
                     this.dialogBox.children.push(u),
                     i += Main.thisMain.isPhone() ? 50 : 30;
-                    h = `${guys[0].score} - ${guys[1].score}`;
+                    h = `${Util.getLeft().score} - ${Util.getRight().score}`;
+                    if (Util.getLeft().charName == "Her No.4") {
+                        if (e.charName == "Her No.4") {
+                            h = '' + -Math.max(50, 500 - clock.ticks / 20 - 2 * e.vars.total_damage);
+                        } else {
+                            h = '' + Math.max(1, 400 + 10 * e.vars.hp - 2 * e.GetOtherGuy().vars.total_damage - 0.2 * clock.ticks / 20);
+                        }
+                    }
                     if (null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,h,Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -50971,13 +51316,13 @@ var $lime_init = function($hx_exports, $global) {
                             u.loc.y = I + l * o * c + a * s * g
                         }
                     }
-                    let defeated = Chars.isBoss(guys[0].charName) && guys[0].score < guys[1].score;
+                    let defeated = Chars.isBoss(Util.getLeft().charName) && Util.getLeft().score < Util.getRight().score;
                     if (u.set_local_xScale(u.set_local_yScale(Main.thisMain.isPhone() ? .6 : .3)),
                     u.ColorizeByName("orange"),
                     this.dialogBox.children.push(u),
                     i += Main.thisMain.isPhone() ? 60 : 52,
                     null == (d = !0) && (d = !1),
-                    (u = new TextSprite(this.GetCenterX(),i,(defeated ? "Boss Defeated" : ""),Main.MAIN_FONT_BIG)).holder = this.dialogBox,
+                    (u = new TextSprite(this.GetCenterX(),i,(defeated ? (ismega ? "Mega Defeated" : "Boss Defeated") : ""),Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
                     d ? (null != u.local_loc ? (u.local_loc.x = u.loc.x,
                     u.local_loc.y = u.loc.y) : u.local_loc = new openfl_geom_Point(u.loc.x,u.loc.y),
@@ -51029,7 +51374,7 @@ var $lime_init = function($hx_exports, $global) {
                     i += Main.thisMain.isPhone() ? 50 : 30;
                     var u, d, J;
                     // h = 0 != e.threePointAttempts ? Math.round(100 * e.threePointMade / e.threePointAttempts) + "%" : "0%";
-                    h = defeated ? guys[0].charName : "";
+                    h = defeated ? Util.getLeft().charName : "";
                     if (null == (d = !0) && (d = !1),
                     (u = new TextSprite(this.GetCenterX(),i,h,Main.MAIN_FONT_BIG)).holder = this.dialogBox,
                     u.localCoords = !0,
@@ -51371,7 +51716,7 @@ var $lime_init = function($hx_exports, $global) {
                     HappyTime()
                 },
                 Add2PlayerWinner: function() {
-                    var e = this.winnerName + ` Wins\nScores: ${guys[0].score} - ${guys[1].score}`
+                    var e = this.winnerName + ` Wins\nScores: ${Util.getLeft().score} - ${Util.getRight().score}`
                       , i = new TextSprite(0,0,e,Main.MAIN_FONT_BIG);
                     i.holder = this.dialogBox,
                     i.localCoords = !0,
@@ -93176,7 +93521,7 @@ var $lime_init = function($hx_exports, $global) {
                             wrapper.style.height = '200px';
                             wrapper.style.overflow = 'auto';
                             div.insertAdjacentHTML('afterbegin', `
-                                <div><p>Name: ${name}</p><p>Wins: ${wins}</p><p>Losses: ${losses}</p><p><a href='https://samas3.github.io/bbti'>BBTI</a></p></div><hr>
+                                <div><p>Name: ${name}</p><p>Wins: ${wins}</p><p>Losses: ${losses}</p></div><hr>
                                 <div><p>Boss Challenge Attempts: ${parseInt(Util.LS_get("boss_wins")) + parseInt(Util.LS_get("boss_loses"))}</p><p>Boss Defeated: ${JSON.parse(Util.LS_get("boss_defeated")).length}/${Chars.boss.length}</p></div>`);
                             wrapper.appendChild(Chars.getBossTable());
                             div.appendChild(wrapper);
@@ -94488,7 +94833,12 @@ var $lime_init = function($hx_exports, $global) {
             }, {
                 name: "main_font_big",
                 data: "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48Zm9udD48aW5mbyBmYWNlPSJQaXhlbGxhcmkiIHNpemU9IjcyIiBib2xkPSIwIiBpdGFsaWM9IjAiIGNoYXJzZXQ9IiIgdW5pY29kZT0iMSIgc3RyZXRjaEg9IjEwMCIgc21vb3RoPSIxIiBhYT0iMSIgcGFkZGluZz0iMSwxLDEsMSIgc3BhY2luZz0iMSwxIi8+PGNvbW1vbiBsaW5lSGVpZ2h0PSI3MiIgYmFzZT0iNTQiIHNjYWxlVz0iNDM1IiBzY2FsZUg9IjQzNCIgcGFnZXM9IjEiIHBhY2tlZD0iMCIvPjxwYWdlcz48cGFnZSBpZD0iMCIgZmlsZT0iVW5uYW1lZC5wbmciLz48L3BhZ2VzPjxjaGFycyBjb3VudD0iOTEiPjxjaGFyIGlkPSIzMiIgeD0iMCIgeT0iMCIgd2lkdGg9IjAiIGhlaWdodD0iMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMCIgeGFkdmFuY2U9IjIzIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIzMyIgeD0iNDE4IiB5PSIxODEiIHdpZHRoPSIxNSIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIxOCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMzQiIHg9IjI1MiIgeT0iNDAzIiB3aWR0aD0iMjgiIGhlaWdodD0iMjQiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjM1IiB4PSI3NiIgeT0iMTczIiB3aWR0aD0iNDIiIGhlaWdodD0iNjAiIHhvZmZzZXQ9Ii0xIiB5b2Zmc2V0PSItMSIgeGFkdmFuY2U9IjQxIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIzNiIgeD0iMjUyIiB5PSIyODUiIHdpZHRoPSIzMyIgaGVpZ2h0PSI2MCIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjM3IiB4PSIwIiB5PSI1OSIgd2lkdGg9IjY1IiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSItMSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNjMiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjM4IiB4PSI3NiIgeT0iMjM0IiB3aWR0aD0iNDIiIGhlaWdodD0iNjAiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iLTEiIHhhZHZhbmNlPSI0NSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMzkiIHg9IjM0IiB5PSIzOTYiIHdpZHRoPSIxNyIgaGVpZ2h0PSIyNiIgeG9mZnNldD0iMi44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIyLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIxOCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNDAiIHg9IjM1OSIgeT0iMzcxIiB3aWR0aD0iMTkiIGhlaWdodD0iNjAiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMjMiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjQxIiB4PSIzOTMiIHk9IjIzOCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjYwIiB4b2Zmc2V0PSI4IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIyNyIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNDIiIHg9IjAiIHk9IjM5NiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjMzIiB4b2Zmc2V0PSItMSIgeW9mZnNldD0iLTEiIHhhZHZhbmNlPSIzMiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNDMiIHg9IjMyMCIgeT0iMzk2IiB3aWR0aD0iMzMiIGhlaWdodD0iMzMiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNDQiIHg9Ijc2IiB5PSI0MDciIHdpZHRoPSIxNSIgaGVpZ2h0PSIyNCIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSI0NCIgeGFkdmFuY2U9IjE4IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI0NSIgeD0iMjE0IiB5PSIzOTUiIHdpZHRoPSIzNSIgaGVpZ2h0PSIxNyIgeG9mZnNldD0iMi44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIyNSIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI0NiIgeD0iOTIiIHk9IjQwNyIgd2lkdGg9IjE3IiBoZWlnaHQ9IjE3IiB4b2Zmc2V0PSIyLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjQzIiB4YWR2YW5jZT0iMTgiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjQ3IiB4PSIyNTIiIHk9IjIyNCIgd2lkdGg9IjMzIiBoZWlnaHQ9IjYwIiB4b2Zmc2V0PSItMSIgeW9mZnNldD0iLTEiIHhhZHZhbmNlPSIzMiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNDgiIHg9IjIxNCIgeT0iMjI3IiB3aWR0aD0iMzciIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjQ5IiB4PSIyOTEiIHk9IjAiIHdpZHRoPSIzMyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjUwIiB4PSIyOTAiIHk9IjU2IiB3aWR0aD0iMzMiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjUxIiB4PSIyOTAiIHk9IjExMiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI1MiIgeD0iMjE0IiB5PSIyODMiIHdpZHRoPSIzNyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNTMiIHg9IjI5MCIgeT0iMTY4IiB3aWR0aD0iMzMiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjU0IiB4PSIyODYiIHk9IjIyNCIgd2lkdGg9IjMzIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI1NSIgeD0iMjE0IiB5PSIzMzkiIHdpZHRoPSIzNyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNTYiIHg9IjI4NiIgeT0iMjgwIiB3aWR0aD0iMzMiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjU3IiB4PSIyODYiIHk9IjMzNiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI1OCIgeD0iNDE4IiB5PSIyODkiIHdpZHRoPSIxNSIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjE4IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI1OSIgeD0iNDE4IiB5PSIyMzciIHdpZHRoPSIxNSIgaGVpZ2h0PSI1MSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjE4IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI2MSIgeD0iMzU5IiB5PSIyMTUiIHdpZHRoPSIzMyIgaGVpZ2h0PSIzMyIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI2MyIgeD0iMzI0IiB5PSIxNjgiIHdpZHRoPSIzMyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNjQiIHg9IjAiIHk9IjExNSIgd2lkdGg9IjYwIiBoZWlnaHQ9IjY5IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjYzIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI2NSIgeD0iNzYiIHk9IjI5NSIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQ1IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI2NiIgeD0iNzYiIHk9IjM1MSIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQ1IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI2NyIgeD0iMTcxIiB5PSIyODAiIHdpZHRoPSIzOCIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjY4IiB4PSIxMjgiIHk9IjAiIHdpZHRoPSI0MiIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNTAiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjY5IiB4PSIzMjUiIHk9IjAiIHdpZHRoPSIzMyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjcwIiB4PSIzMjQiIHk9IjU2IiB3aWR0aD0iMzMiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjgiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQxIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI3MSIgeD0iMTcxIiB5PSIzMzYiIHdpZHRoPSIzOCIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjcyIiB4PSIxMjgiIHk9IjU2IiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjczIiB4PSIzOTMiIHk9IjE4MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjI3IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI3NCIgeD0iMjE0IiB5PSIwIiB3aWR0aD0iMzgiIGhlaWdodD0iNTUiIHhvZmZzZXQ9Ii0xIiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNzUiIHg9IjEyOCIgeT0iMTEyIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijc2IiB4PSIzMjQiIHk9IjExMiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI3NyIgeD0iMCIgeT0iMTg1IiB3aWR0aD0iNTEiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNTQiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijc4IiB4PSI3NiIgeT0iOTkiIHdpZHRoPSI0NiIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI1MCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iNzkiIHg9IjEyOCIgeT0iMTY4IiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjgiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjUwIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI4MCIgeD0iMjUyIiB5PSIxNjgiIHdpZHRoPSIzNyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iODEiIHg9Ijc2IiB5PSI0MyIgd2lkdGg9IjQ3IiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSI4IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI1NCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iODIiIHg9IjEyOCIgeT0iMjI0IiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjgzIiB4PSIxMjgiIHk9IjI4MCIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQ1IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI4NCIgeD0iMTI4IiB5PSIzMzYiIHdpZHRoPSI0MiIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI0NSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iODUiIHg9IjE3MSIgeT0iMCIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSI4IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI1MCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iODYiIHg9IjE3MSIgeT0iNTYiIHdpZHRoPSI0MiIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iOCIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNTAiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijg3IiB4PSIwIiB5PSIyNDEiIHdpZHRoPSI1MSIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI1NCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iODgiIHg9IjE3MSIgeT0iMTEyIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDUiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijg5IiB4PSIxNzEiIHk9IjE2OCIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQ1IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI5MCIgeD0iMCIgeT0iMjk3IiB3aWR0aD0iNTEiIGhlaWdodD0iNTUiIHhvZmZzZXQ9Ii0xIiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI1MCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iOTEiIHg9IjM5MyIgeT0iMzYwIiB3aWR0aD0iMTkiIGhlaWdodD0iNjAiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMjMiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjkzIiB4PSIzOTMiIHk9IjI5OSIgd2lkdGg9IjIwIiBoZWlnaHQ9IjYwIiB4b2Zmc2V0PSI4IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIyNyIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iOTQiIHg9IjE3MSIgeT0iMzkyIiB3aWR0aD0iMzgiIGhlaWdodD0iMjkiIHhvZmZzZXQ9Ii0xIiB5b2Zmc2V0PSI4IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijk1IiB4PSI3NiIgeT0iMTU1IiB3aWR0aD0iNDQiIGhlaWdodD0iMTciIHhvZmZzZXQ9Ii0yIiB5b2Zmc2V0PSI1Ni45IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijk3IiB4PSIxMjgiIHk9IjM5MiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjQyIiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjE3IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9Ijk4IiB4PSIyNTMiIHk9IjAiIHdpZHRoPSIzNyIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iOTkiIHg9IjI4NiIgeT0iMzkyIiB3aWR0aD0iMzMiIGhlaWdodD0iNDIiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTAwIiB4PSIyNTIiIHk9IjU2IiB3aWR0aD0iMzciIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEwMSIgeD0iMzIwIiB5PSIyMjQiIHdpZHRoPSIzMyIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMDIiIHg9IjM5MyIgeT0iNzAiIHdpZHRoPSIyNCIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIyNyIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTAzIiB4PSIyMTQiIHk9IjU2IiB3aWR0aD0iMzciIGhlaWdodD0iNTYiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTA0IiB4PSIyNTIiIHk9IjExMiIgd2lkdGg9IjM3IiBoZWlnaHQ9IjU1IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjQxIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMDUiIHg9IjQxOCIgeT0iMTI1IiB3aWR0aD0iMTUiIGhlaWdodD0iNTUiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMTgiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEwNiIgeD0iMzkzIiB5PSIwIiB3aWR0aD0iMjQiIGhlaWdodD0iNjkiIHhvZmZzZXQ9Ii01LjEiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjE4IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMDciIHg9IjE3MSIgeT0iMjI0IiB3aWR0aD0iMzgiIGhlaWdodD0iNTUiIHhvZmZzZXQ9Ii0xIiB5b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTA4IiB4PSI0MTgiIHk9IjY3IiB3aWR0aD0iMTciIGhlaWdodD0iNTciIHhvZmZzZXQ9IjIuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMi44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMTgiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEwOSIgeD0iMCIgeT0iMzUzIiB3aWR0aD0iNTEiIGhlaWdodD0iNDIiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSI1NCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTEwIiB4PSIzMjAiIHk9IjI2NyIgd2lkdGg9IjMzIiBoZWlnaHQ9IjQyIiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjE3IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjExMSIgeD0iMzIwIiB5PSIzMTAiIHdpZHRoPSIzMyIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMTIiIHg9IjIxNCIgeT0iMTEzIiB3aWR0aD0iMzciIGhlaWdodD0iNTYiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSI0MSIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTEzIiB4PSIyMTQiIHk9IjE3MCIgd2lkdGg9IjM3IiBoZWlnaHQ9IjU2IiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjE3IiB4YWR2YW5jZT0iNDEiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjExNCIgeD0iMzIwIiB5PSIzNTMiIHdpZHRoPSIzMyIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMTUiIHg9IjM1OSIgeT0iMCIgd2lkdGg9IjMzIiBoZWlnaHQ9IjQyIiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjE3IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjExNiIgeD0iMzkzIiB5PSIxMjYiIHdpZHRoPSIyNCIgaGVpZ2h0PSI1NSIgeG9mZnNldD0iLTEiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjIzIiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMTciIHg9IjM1OSIgeT0iNDMiIHdpZHRoPSIzMyIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMTgiIHg9IjM1OSIgeT0iODYiIHdpZHRoPSIzMyIgaGVpZ2h0PSI0MiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMTkiIHg9Ijc2IiB5PSIwIiB3aWR0aD0iNTEiIGhlaWdodD0iNDIiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSI1NCIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTIwIiB4PSIzNTkiIHk9IjEyOSIgd2lkdGg9IjMzIiBoZWlnaHQ9IjQyIiB4b2Zmc2V0PSIzLjg5OTk5OTk5OTk5OTk5OTUiIHlvZmZzZXQ9IjE3IiB4YWR2YW5jZT0iMzYiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEyMSIgeD0iMjUyIiB5PSIzNDYiIHdpZHRoPSIzMyIgaGVpZ2h0PSI1NiIgeG9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB5b2Zmc2V0PSIxNyIgeGFkdmFuY2U9IjM2IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSIxMjIiIHg9IjM1OSIgeT0iMTcyIiB3aWR0aD0iMzMiIGhlaWdodD0iNDIiIHhvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMTciIHhhZHZhbmNlPSIzNiIgcGFnZT0iMCIgY2hubD0iMTUiLz48Y2hhciBpZD0iMTIzIiB4PSIzNTkiIHk9IjI0OSIgd2lkdGg9IjI5IiBoZWlnaHQ9IjYwIiB4b2Zmc2V0PSItMSIgeW9mZnNldD0iMy44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMjciIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEyNCIgeD0iNDE4IiB5PSIwIiB3aWR0aD0iMTciIGhlaWdodD0iNjYiIHhvZmZzZXQ9IjIuODk5OTk5OTk5OTk5OTk5NSIgeW9mZnNldD0iMi44OTk5OTk5OTk5OTk5OTk1IiB4YWR2YW5jZT0iMTgiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PGNoYXIgaWQ9IjEyNSIgeD0iMzU5IiB5PSIzMTAiIHdpZHRoPSIyOSIgaGVpZ2h0PSI2MCIgeG9mZnNldD0iLTEiIHlvZmZzZXQ9IjMuODk5OTk5OTk5OTk5OTk5NSIgeGFkdmFuY2U9IjI3IiBwYWdlPSIwIiBjaG5sPSIxNSIvPjxjaGFyIGlkPSI4NDcwIiB4PSIwIiB5PSIwIiB3aWR0aD0iNzUiIGhlaWdodD0iNTgiIHhvZmZzZXQ9Ii0yIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iNjkiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+PC9jaGFycz48L2ZvbnQ+"
-            }, {
+            }, 
+            {
+                name: "custom_font",
+                data: "PGZvbnQ+CjxpbmZvIGZhY2U9IlNvdXJjZSBIYW4gU2FucyBDTiIgc2l6ZT0iNzIiIGJvbGQ9IjAiIGl0YWxpYz0iMCIgY2hhcnNldD0iIiB1bmljb2RlPSIxIiBzdHJldGNoSD0iMTAwIiBzbW9vdGg9IjEiIGFhPSIxIiBwYWRkaW5nPSIxLDEsMSwxIiBzcGFjaW5nPSIxLDEiIG91dGxpbmU9IjAiLz4KPGNvbW1vbiBsaW5lSGVpZ2h0PSIxMDQiIGJhc2U9Ijg0IiBzY2FsZVc9IjczNiIgc2NhbGVIPSI2OSIgcGFnZXM9IjEiIHBhY2tlZD0iMCIgYWxwaGFDaG5sPSIwIiByZWRDaG5sPSI0IiBncmVlbkNobmw9IjQiIGJsdWVDaG5sPSI0Ii8+CjxwYWdlcz4KPHBhZ2UgaWQ9IjAiIGZpbGU9IjEucG5nIi8+CjwvcGFnZXM+CjxjaGFycyBjb3VudD0iMTIiPgo8Y2hhciBpZD0iMzIiIHg9IjAiIHk9IjAiIHdpZHRoPSIwIiBoZWlnaHQ9IjAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjAiIHhhZHZhbmNlPSIxNyIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjE5OTc4IiB4PSI1MzciIHk9IjAiIHdpZHRoPSI2OCIgaGVpZ2h0PSI2MyIgeG9mZnNldD0iMiIgeW9mZnNldD0iMjQiIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjIwMTcwIiB4PSIwIiB5PSIwIiB3aWR0aD0iNjgiIGhlaWdodD0iNjkiIHhvZmZzZXQ9IjIiIHlvZmZzZXQ9IjIyIiB4YWR2YW5jZT0iNzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+CjxjaGFyIGlkPSIyMTM5NyIgeD0iNDY4IiB5PSIwIiB3aWR0aD0iNjgiIGhlaWdodD0iNjQiIHhvZmZzZXQ9IjEiIHlvZmZzZXQ9IjI2IiB4YWR2YW5jZT0iNzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+CjxjaGFyIGlkPSIyMjgyNSIgeD0iNjA2IiB5PSIwIiB3aWR0aD0iNjgiIGhlaWdodD0iNjIiIHhvZmZzZXQ9IjIiIHlvZmZzZXQ9IjI4IiB4YWR2YW5jZT0iNzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+CjxjaGFyIGlkPSIyMjk4NyIgeD0iNjkiIHk9IjAiIHdpZHRoPSI2OSIgaGVpZ2h0PSI2OCIgeG9mZnNldD0iMiIgeW9mZnNldD0iMjMiIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjI0MDQ5IiB4PSI2NzUiIHk9IjAiIHdpZHRoPSI2MSIgaGVpZ2h0PSI2MiIgeG9mZnNldD0iOSIgeW9mZnNldD0iMjciIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjI0MzIwIiB4PSI0MDAiIHk9IjAiIHdpZHRoPSI2NyIgaGVpZ2h0PSI2NCIgeG9mZnNldD0iMyIgeW9mZnNldD0iMjciIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjI1MTA1IiB4PSIxMzkiIHk9IjAiIHdpZHRoPSI2OSIgaGVpZ2h0PSI2OCIgeG9mZnNldD0iMiIgeW9mZnNldD0iMjMiIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjI1MTUyIiB4PSIyNjMiIHk9IjAiIHdpZHRoPSI2OSIgaGVpZ2h0PSI2NyIgeG9mZnNldD0iMSIgeW9mZnNldD0iMjQiIHhhZHZhbmNlPSI3MiIgcGFnZT0iMCIgY2hubD0iMTUiLz4KPGNoYXIgaWQ9IjMzMjU4IiB4PSIyMDkiIHk9IjAiIHdpZHRoPSI1MyIgaGVpZ2h0PSI2OCIgeG9mZnNldD0iMTAiIHlvZmZzZXQ9IjIzIiB4YWR2YW5jZT0iNzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+CjxjaGFyIGlkPSIzNTIwMSIgeD0iMzMzIiB5PSIwIiB3aWR0aD0iNjYiIGhlaWdodD0iNjUiIHhvZmZzZXQ9IjMiIHlvZmZzZXQ9IjI2IiB4YWR2YW5jZT0iNzIiIHBhZ2U9IjAiIGNobmw9IjE1Ii8+CjwvY2hhcnM+CjwvZm9udD4="
+            },
+            {
                 name: "chat_font",
                 data: "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLUNyZWF0ZWQgdXNpbmcgR2x5cGggRGVzaWduZXIgLSBodHRwOi8vd3d3Ljcxc3F1YXJlZC5jb20vZ2x5cGhkZXNpZ25lci0tPgo8Zm9udD4KICAgIDxpbmZvIGZhY2U9Ik15IEZvbnQiIHNpemU9IjQ0IiBib2xkPSIwIiBpdGFsaWM9IjAiIGNoYXNyc2V0PSIiIHVuaWNvZGU9IjAiIHN0cmV0Y2hIPSIxMDAiIHNtb290aD0iMSIgYWE9IjEiIHBhZGRpbmc9IjIsMiwyLDIiIHNwYWNpbmc9IjIsMiIvPgogICAgPGNvbW1vbiBsaW5lSGVpZ2h0PSIzOSIgYmFzZT0iMzIiIHNjYWxlVz0iNTEyIiBzY2FsZUg9IjI1NiIgcGFnZXM9IjEiIHBhY2tlZD0iMCIvPgogICAgPHBhZ2VzPgogICAgICAgIDxwYWdlIGlkPSIwIiBmaWxlPSJjaGF0LnBuZyIvPgogICAgPC9wYWdlcz4KICAgIDxjaGFycyBjb3VudD0iOTUiPgogICAgICAgIDxjaGFyIGlkPSIzMiIgeD0iMzEzIiB5PSIxMzYiIHdpZHRoPSIwIiBoZWlnaHQ9IjAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMzIiB4YWR2YW5jZT0iOSIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJzcGFjZSIvPgogICAgICAgIDxjaGFyIGlkPSIzMyIgeD0iMjgiIHk9IjEzNiIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMTAiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iISIvPgogICAgICAgIDxjaGFyIGlkPSIzNCIgeD0iMjUyIiB5PSIxMzYiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMSIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjE5IiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IiZxdW90OyIvPgogICAgICAgIDxjaGFyIGlkPSIzNSIgeD0iMzU2IiB5PSIyIiB3aWR0aD0iMjciIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyNSIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSIjIi8+CiAgICAgICAgPGNoYXIgaWQ9IjM2IiB4PSIyIiB5PSIyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzYiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9Ii0wIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iJCIvPgogICAgICAgIDxjaGFyIGlkPSIzNyIgeD0iMjY2IiB5PSIyIiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyOSIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSIlIi8+CiAgICAgICAgPGNoYXIgaWQ9IjM4IiB4PSIyOCIgeT0iMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjM2IiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSItMCIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IiZhbXA7Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjM5IiB4PSIyODciIHk9IjEzNiIgd2lkdGg9IjExIiBoZWlnaHQ9IjExIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMTAiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iJyIvPgogICAgICAgIDxjaGFyIGlkPSI0MCIgeD0iNDQ3IiB5PSIxMDQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjEzIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IigiLz4KICAgICAgICA8Y2hhciBpZD0iNDEiIHg9IjQ2MyIgeT0iMTA0IiB3aWR0aD0iMTQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIxMyIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSIpIi8+CiAgICAgICAgPGNoYXIgaWQ9IjQyIiB4PSIxMDYiIHk9IjEzNiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iKiIvPgogICAgICAgIDxjaGFyIGlkPSI0MyIgeD0iNTQiIHk9IjEzNiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSI2IiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iKyIvPgogICAgICAgIDxjaGFyIGlkPSI0NCIgeD0iMTg3IiB5PSIxMzYiIHdpZHRoPSIxMSIgaGVpZ2h0PSIxNCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMjIiIHhhZHZhbmNlPSIxMCIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSIsIi8+CiAgICAgICAgPGNoYXIgaWQ9IjQ1IiB4PSIyMDAiIHk9IjEzNiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjExIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIxMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Ii0iLz4KICAgICAgICA8Y2hhciBpZD0iNDYiIHg9IjMwMCIgeT0iMTM2IiB3aWR0aD0iMTEiIGhlaWdodD0iMTEiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjIyIiB4YWR2YW5jZT0iMTAiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iLiIvPgogICAgICAgIDxjaGFyIGlkPSI0NyIgeD0iMTcwIiB5PSIyIiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyOSIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSIvIi8+CiAgICAgICAgPGNoYXIgaWQ9IjQ4IiB4PSIyODgiIHk9IjEwNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iMCIvPgogICAgICAgIDxjaGFyIGlkPSI0OSIgeD0iMTUiIHk9IjEzNiIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMTAiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iMSIvPgogICAgICAgIDxjaGFyIGlkPSI1MCIgeD0iODAiIHk9IjEwNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iMiIvPgogICAgICAgIDxjaGFyIGlkPSI1MSIgeD0iMTA2IiB5PSIxMDQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IjMiLz4KICAgICAgICA8Y2hhciBpZD0iNTIiIHg9IjEzMiIgeT0iMTA0IiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSI0Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjUzIiB4PSIxNTgiIHk9IjEwNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iNSIvPgogICAgICAgIDxjaGFyIGlkPSI1NCIgeD0iMTg0IiB5PSIxMDQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IjYiLz4KICAgICAgICA8Y2hhciBpZD0iNTUiIHg9IjIxMCIgeT0iMTA0IiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSI3Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjU2IiB4PSIyMzYiIHk9IjEwNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iOCIvPgogICAgICAgIDxjaGFyIGlkPSI1NyIgeD0iMjYyIiB5PSIxMDQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IjkiLz4KICAgICAgICA8Y2hhciBpZD0iNTgiIHg9IjQxIiB5PSIxMzYiIHdpZHRoPSIxMSIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjEwIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IjoiLz4KICAgICAgICA8Y2hhciBpZD0iNTkiIHg9IjkzIiB5PSIyIiB3aWR0aD0iMTEiIGhlaWdodD0iMzMiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIxMCIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSI7Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjYwIiB4PSIzNjUiIHk9IjEwNCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMTkiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iJmx0OyIvPgogICAgICAgIDxjaGFyIGlkPSI2MSIgeD0iODAiIHk9IjEzNiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSI2IiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iPSIvPgogICAgICAgIDxjaGFyIGlkPSI2MiIgeD0iMzg3IiB5PSIxMDQiIHdpZHRoPSIyMCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjE5IiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IiZndDsiLz4KICAgICAgICA8Y2hhciBpZD0iNjMiIHg9IjMxNCIgeT0iMTA0IiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSI/Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjY0IiB4PSIyMDIiIHk9IjIiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjI5IiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IkAiLz4KICAgICAgICA8Y2hhciBpZD0iNjUiIHg9IjM0MCIgeT0iMTA0IiB3aWR0aD0iMjMiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJBIi8+CiAgICAgICAgPGNoYXIgaWQ9IjY2IiB4PSIzODUiIHk9IjIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IkIiLz4KICAgICAgICA8Y2hhciBpZD0iNjciIHg9IjQxMSIgeT0iMiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iQyIvPgogICAgICAgIDxjaGFyIGlkPSI2OCIgeD0iNDM3IiB5PSIyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJEIi8+CiAgICAgICAgPGNoYXIgaWQ9IjY5IiB4PSI0NjMiIHk9IjIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IkUiLz4KICAgICAgICA8Y2hhciBpZD0iNzAiIHg9IjIiIHk9IjQwIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJGIi8+CiAgICAgICAgPGNoYXIgaWQ9IjcxIiB4PSIyOCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IkciLz4KICAgICAgICA8Y2hhciBpZD0iNzIiIHg9IjU0IiB5PSI0MCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iSCIvPgogICAgICAgIDxjaGFyIGlkPSI3MyIgeD0iODAiIHk9IjQwIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJJIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijc0IiB4PSIxMDYiIHk9IjQwIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJKIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijc1IiB4PSIxMzIiIHk9IjQwIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJLIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijc2IiB4PSIxNTgiIHk9IjQwIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJMIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijc3IiB4PSIyOTgiIHk9IjIiIHdpZHRoPSIyNyIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjI1IiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Ik0iLz4KICAgICAgICA8Y2hhciBpZD0iNzgiIHg9IjE4NCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Ik4iLz4KICAgICAgICA8Y2hhciBpZD0iNzkiIHg9IjIxMCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Ik8iLz4KICAgICAgICA8Y2hhciBpZD0iODAiIHg9IjIzNiIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlAiLz4KICAgICAgICA8Y2hhciBpZD0iODEiIHg9IjI2MiIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlEiLz4KICAgICAgICA8Y2hhciBpZD0iODIiIHg9IjI4OCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlIiLz4KICAgICAgICA8Y2hhciBpZD0iODMiIHg9IjMxNCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlMiLz4KICAgICAgICA8Y2hhciBpZD0iODQiIHg9IjM0MCIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlQiLz4KICAgICAgICA8Y2hhciBpZD0iODUiIHg9IjM2NiIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlUiLz4KICAgICAgICA8Y2hhciBpZD0iODYiIHg9IjM5MiIgeT0iNDAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlYiLz4KICAgICAgICA8Y2hhciBpZD0iODciIHg9IjMyNyIgeT0iMiIgd2lkdGg9IjI3IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjUiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iVyIvPgogICAgICAgIDxjaGFyIGlkPSI4OCIgeD0iNDE4IiB5PSI0MCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iWCIvPgogICAgICAgIDxjaGFyIGlkPSI4OSIgeD0iNDQ0IiB5PSI0MCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iWSIvPgogICAgICAgIDxjaGFyIGlkPSI5MCIgeD0iNDcwIiB5PSI0MCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iWiIvPgogICAgICAgIDxjaGFyIGlkPSI5MSIgeD0iNDc5IiB5PSIxMDQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjEzIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9IlsiLz4KICAgICAgICA8Y2hhciBpZD0iOTIiIHg9IjIzNCIgeT0iMiIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjkiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iXCIvPgogICAgICAgIDxjaGFyIGlkPSI5MyIgeD0iNDk1IiB5PSIxMDQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjEzIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Il0iLz4KICAgICAgICA8Y2hhciBpZD0iOTQiIHg9IjE2MSIgeT0iMTM2IiB3aWR0aD0iMjQiIGhlaWdodD0iMTciIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJeIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijk1IiB4PSIyMjYiIHk9IjEzNiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjExIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIyNSIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Il8iLz4KICAgICAgICA8Y2hhciBpZD0iOTYiIHg9IjI3NCIgeT0iMTM2IiB3aWR0aD0iMTEiIGhlaWdodD0iMTEiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIxMCIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJgIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijk3IiB4PSIyIiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iYSIvPgogICAgICAgIDxjaGFyIGlkPSI5OCIgeD0iMjgiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJiIi8+CiAgICAgICAgPGNoYXIgaWQ9Ijk5IiB4PSI1NCIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9ImMiLz4KICAgICAgICA8Y2hhciBpZD0iMTAwIiB4PSI4MCIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9ImQiLz4KICAgICAgICA8Y2hhciBpZD0iMTAxIiB4PSIxMDYiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJlIi8+CiAgICAgICAgPGNoYXIgaWQ9IjEwMiIgeD0iMTMyIiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iZiIvPgogICAgICAgIDxjaGFyIGlkPSIxMDMiIHg9IjE1OCIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9ImciLz4KICAgICAgICA8Y2hhciBpZD0iMTA0IiB4PSIxODQiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJoIi8+CiAgICAgICAgPGNoYXIgaWQ9IjEwNSIgeD0iMiIgeT0iMTM2IiB3aWR0aD0iMTEiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIxMCIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJpIi8+CiAgICAgICAgPGNoYXIgaWQ9IjEwNiIgeD0iMjEwIiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0iaiIvPgogICAgICAgIDxjaGFyIGlkPSIxMDciIHg9IjIzNiIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9ImsiLz4KICAgICAgICA8Y2hhciBpZD0iMTA4IiB4PSIyNjIiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJsIi8+CiAgICAgICAgPGNoYXIgaWQ9IjEwOSIgeD0iMTA2IiB5PSIyIiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyOSIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJtIi8+CiAgICAgICAgPGNoYXIgaWQ9IjExMCIgeD0iMjg4IiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0ibiIvPgogICAgICAgIDxjaGFyIGlkPSIxMTEiIHg9IjMxNCIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9Im8iLz4KICAgICAgICA8Y2hhciBpZD0iMTEyIiB4PSIzNDAiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJwIi8+CiAgICAgICAgPGNoYXIgaWQ9IjExMyIgeD0iNjciIHk9IjIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMyIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9InEiLz4KICAgICAgICA8Y2hhciBpZD0iMTE0IiB4PSIzNjYiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJyIi8+CiAgICAgICAgPGNoYXIgaWQ9IjExNSIgeD0iMzkyIiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0icyIvPgogICAgICAgIDxjaGFyIGlkPSIxMTYiIHg9IjQxOCIgeT0iNzIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9InQiLz4KICAgICAgICA8Y2hhciBpZD0iMTE3IiB4PSI0NDQiIHk9IjcyIiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJ1Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjExOCIgeD0iNDcwIiB5PSI3MiIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0idiIvPgogICAgICAgIDxjaGFyIGlkPSIxMTkiIHg9IjEzOCIgeT0iMiIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjkiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0idyIvPgogICAgICAgIDxjaGFyIGlkPSIxMjAiIHg9IjIiIHk9IjEwNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMjIiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0ieCIvPgogICAgICAgIDxjaGFyIGlkPSIxMjEiIHg9IjI4IiB5PSIxMDQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjIyIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9InkiLz4KICAgICAgICA8Y2hhciBpZD0iMTIyIiB4PSI1NCIgeT0iMTA0IiB3aWR0aD0iMjQiIGhlaWdodD0iMzAiIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjMiIHhhZHZhbmNlPSIyMiIgcGFnZT0iMCIgY2hubD0iMCIgbGV0dGVyPSJ6Ii8+CiAgICAgICAgPGNoYXIgaWQ9IjEyMyIgeD0iNDA5IiB5PSIxMDQiIHdpZHRoPSIxNyIgaGVpZ2h0PSIzMCIgeG9mZnNldD0iMCIgeW9mZnNldD0iMyIgeGFkdmFuY2U9IjE2IiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9InsiLz4KICAgICAgICA8Y2hhciBpZD0iMTI0IiB4PSI1NCIgeT0iMiIgd2lkdGg9IjExIiBoZWlnaHQ9IjM2IiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSItMCIgeGFkdmFuY2U9IjEwIiBwYWdlPSIwIiBjaG5sPSIwIiBsZXR0ZXI9InwiLz4KICAgICAgICA8Y2hhciBpZD0iMTI1IiB4PSI0MjgiIHk9IjEwNCIgd2lkdGg9IjE3IiBoZWlnaHQ9IjMwIiB4b2Zmc2V0PSIwIiB5b2Zmc2V0PSIzIiB4YWR2YW5jZT0iMTYiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0ifSIvPgogICAgICAgIDxjaGFyIGlkPSIxMjYiIHg9IjEzMiIgeT0iMTM2IiB3aWR0aD0iMjciIGhlaWdodD0iMTciIHhvZmZzZXQ9IjAiIHlvZmZzZXQ9IjEwIiB4YWR2YW5jZT0iMjUiIHBhZ2U9IjAiIGNobmw9IjAiIGxldHRlcj0ifiIvPgogICAgPC9jaGFycz4KPC9mb250Pg"
             }, {
@@ -94782,10 +95132,9 @@ var $lime_init = function($hx_exports, $global) {
             MainGame.privateGameNumber = 0,
             MainGame.ssCode = "",
             MainGame.firstTransition = !0,
-            MainGame.getShotPoints = () => {
-                if (MainGame._shotPoints == undefined) MainGame._shotPoints = 3;
-                if (MainGame.critical == undefined) MainGame.critical = 0;
-                return MainGame._shotPoints * (MainGame.critical + 1);
+            MainGame.getShotPoints = (guy) => {
+                if (!MainGame._shotPoints) MainGame._shotPoints = 3;
+                return MainGame._shotPoints * (guy.criticalBase + 1);
             }
             // hook score
             Misc.soundChannels = new haxe_ds_List,

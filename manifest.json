@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BasketBros++",
-  "version": "2.1",
+  "version": "3.0",
   "description": "Basketbros Community Edition",
   "permissions": ["scripting", "declarativeNetRequest"],
   "host_permissions": [
@@ -11,6 +11,7 @@
     {
       "matches": ["https://basketbros.io/*"],
       "js": ["content.js"],
+      "css": ["block.css"],
       "run_at": "document_start"
     },
     {

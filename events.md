@@ -11,10 +11,10 @@
 "punch", { from: Guy, to: Guy, success: boolean }
 ret { success: boolean }
 
-"shoot", { guy: Guy, critical: boolean, point: number }
-ret { point: number, critical: boolean }
+"shoot", { guy: Guy, point: number }
+ret { point: number }
 
-"point", { guy: Guy, point: number, critical: boolean }
+"point", { guy: Guy, point: number }
 
 "timer", { time: number, quarter: number }
 
