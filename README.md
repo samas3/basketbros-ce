@@ -1,5 +1,12 @@
 # BasketBros CE
 
+## Deprecated
+
+未来计划：
+- 加入Her的Overheat模式（随击败的Boss数增加而削弱，初始2倍数值）
+- 加入Mega排行榜
+- 自定义字体支持（[方法](https://chat.deepseek.com/share/makx7x4p739m2da16h)），代码中已有示例
+
 ## Windows/Mac/Linux 安装步骤（仅支持Chrome/Edge等Chromium浏览器）
 
 1. [下载插件 (选择 Source code (zip))](https://github.com/samas3/basketbros-ce/releases/latest)

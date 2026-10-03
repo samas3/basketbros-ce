@@ -58,3 +58,56 @@ function createDialog(options = {}) {
         close: () => overlay.remove()
     };
 }
+
+const dict = {
+    'zh': {
+
+    },
+    'en': {
+        'or': 'OR',
+        'quarter': 'QUARTER',
+        'locked': 'LOCKED',
+        'strengths': 'STRENGTHS',
+        'weaknesses': 'WEAKNESSES',
+        'skills': 'SKILLS',
+        'play_now': 'Play Now!',
+        '2p': '2 PLAYERS SAME PC',
+        'boss_challenge': 'BOSS CHALLENGE',
+        'online_vs_friends': 'ONLINE VS FRIENDS',
+        'host': 'HOST',
+        'join': 'JOIN',
+        'server': 'Server:',
+        "WE": "US California",
+        "EA": "US Atlanta",
+        "EU": "EU Frankfurt",
+        "AS": "AS Seoul",
+        "AU": "AU Sydney",
+        "MW": "US Chicago",
+        "DA": "US Dallas",
+        "NY": "US New Jersey",
+        'privacy_policy': 'Privacy Policy',
+        'terms_of_service': 'Terms of Service',
+        'copyright': ' Blue Wizard Digital',
+        'control_panel': 'Control Panel',
+        'cpu_guy': 'CPU Guy: ',
+        'boss': 'Boss: ',
+        'you': 'You: ',
+        'human_guy': 'Human Guy: ',
+        'choose_baller': 'CHOOSE YOUR BALLER',
+        'ready': ' Ready!',
+        'left_side': 'LEFT SIDE: ',
+        'right_side': 'RIGHT SIDE: ',
+        'connecting': 'Connecting to server.',
+        'connected': 'Connected, waiting for opponent!',
+        'join_code': 'Join Code:',
+        'tip': 'Tip: Press ENTER to chat during games!',
+        'enter_game_code': 'Enter Game Code',
+        'game_paused': 'Game Paused',
+        'copy': 'Copy',
+        'okay': 'Okay!',
+        'stay': 'Stay',
+        'quit': 'Quit',
+        'exit': 'Exit',
+        
+    }
+}
