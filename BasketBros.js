@@ -573,10 +573,8 @@ class CharacterFinder {
             ["Blizzard Johnny", false, 7, 4, 7, 4, 7, 3, "AI annihilator, amazing point scorer when not facing humans.", "Often fails to secure his phone from the teacher. Slays too much.", 0, 3, () => {
                 eventBus.register("taunt", (data) => {
                     let guy = data.guy;
-                    if (!guy.vars.last_taunt) guy.vars.last_taunt = clock.ticks;
-                    if (guy.charName == "Blizzard Johnny" && guy.getCritical() < 75 && data.type == 0 && clock.ticks - guy.vars.last_taunt > 30) {
+                    if (guy.charName == "Blizzard Johnny" && guy.getCritical() < 75 && data.type == 0) {
                         guy.mCritical++;
-                        guy.vars.last_taunt = clock.ticks;
                     }
                 });
             }, "Increases critical when taunting", "bro_12"],
@@ -1509,13 +1507,10 @@ class CharacterFinder {
                             other.KnockDown(guy);
                         }
                         if (!guy.vars.taunt_cnt) guy.vars.taunt_cnt = 0;
-                        if (guy.vars.last_taunt && clock.ticks - guy.vars.last_taunt > 20) {
-                            guy.vars.taunt_cnt++;
-                            if (guy.vars.taunt_cnt % 5 == 0) {
-                                guy.vars.hp++;
-                            }
+                        guy.vars.taunt_cnt++;
+                        if (guy.vars.taunt_cnt % 5 == 0) {
+                            guy.vars.hp++;
                         }
-                        guy.vars.last_taunt = clock.ticks;
                     }
                 });
                 eventBus.register("point", (data) => {
@@ -17398,7 +17393,7 @@ var $lime_init = function($hx_exports, $global) {
                 Celebrate: function(e) {
                     null == e && (e = this.celebrateAnimName),
                     this.bones.PlayAnimation(e, !1, 70),
-                    // this.mode = Modes.MODE_CELEBRATING,
+                    this.mode = Modes.MODE_CELEBRATING,
                     this.xSpeed = 0
                 },
                 PlayCelebrateSound: function() {},
